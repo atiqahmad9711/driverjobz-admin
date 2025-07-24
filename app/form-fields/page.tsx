@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+"use client";
 import {
   Card,
   CardContent,
@@ -6,27 +6,25 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import prisma from "@/util/prismaClient";
+import { trpc } from "@/util/trpc";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@radix-ui/react-accordion";
+import { LoaderCircle } from "lucide-react";
 
-export default async function Page() {
-  const formFields = await prisma.formField.findMany({
-    include: {
-      formValues: true,
-    },
-    take: 10,
+export default function Page() {
+  const formFields = trpc.example.getFormFields.useQuery({
+    categorySlug: "school-bus-driver",
   });
 
   return (
     <div className="flex flex-1 flex-col">
       <div className="@container/main flex flex-1 flex-col gap-2">
         <div className="flex flex-col gap-6 py-6 px-4 md:gap-8 md:py-8 lg:px-8">
-          {formFields.map((formField) => (
+          {formFields.isLoading? <><LoaderCircle className="animate-spin" /></>: formFields.data?.map((formField) => (
             <Card key={formField.formFieldId} className="@container/card">
               <CardHeader>
                 <CardTitle className="text-lg md:text-xl font-semibold">
@@ -61,17 +59,14 @@ export default async function Page() {
                     <strong>Active:</strong> {formField.isActive ? "Yes" : "No"}
                   </p>
                   <p>
-                    <strong>Created:</strong>{" "}
-                    {formField.createdAt.toISOString()}
+                    <strong>Created:</strong> {formField.createdAt}
                   </p>
                   <p>
-                    <strong>Updated:</strong>{" "}
-                    {formField.updatedAt.toISOString()}
+                    <strong>Updated:</strong> {formField.updatedAt}
                   </p>
                   {formField.deletedAt && (
                     <p>
-                      <strong>Deleted:</strong>{" "}
-                      {formField.deletedAt.toISOString()}
+                      <strong>Deleted:</strong> {formField.deletedAt}
                     </p>
                   )}
                 </div>
@@ -84,7 +79,9 @@ export default async function Page() {
                         value={formValue.formValueId.toString()}
                       >
                         <AccordionTrigger className="flex w-full items-center justify-between py-3 px-4 text-sm font-medium transition-all hover:bg-muted/50 [&[data-state=open]>svg]:rotate-180">
-                          <span className="truncate">{formValue.formValueSlug}</span>
+                          <span className="truncate">
+                            {formValue.formValueSlug}
+                          </span>
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
                             width="16"
@@ -134,17 +131,14 @@ export default async function Page() {
                             <strong>Rank:</strong> {formValue.rank}
                           </p>
                           <p>
-                            <strong>Created:</strong>{" "}
-                            {formValue.createdAt.toISOString()}
+                            <strong>Created:</strong> {formValue.createdAt}
                           </p>
                           <p>
-                            <strong>Updated:</strong>{" "}
-                            {formValue.updatedAt.toISOString()}
+                            <strong>Updated:</strong> {formValue.updatedAt}
                           </p>
                           {formValue.deletedAt && (
                             <p>
-                              <strong>Deleted:</strong>{" "}
-                              {formValue.deletedAt.toISOString()}
+                              <strong>Deleted:</strong> {formValue.deletedAt}
                             </p>
                           )}
                         </AccordionContent>
