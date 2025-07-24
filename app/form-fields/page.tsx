@@ -1,4 +1,67 @@
 "use client";
+
+import { useEffect } from 'react';
+import { useForm, SubmitHandler } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Button } from '@/components/ui/button';
+import { Form } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { LoaderCircle, ChevronsUpDown } from 'lucide-react';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+
+type FormValues = {
+  valueEn: string;
+  valueEs: string;
+  descriptionEn: string;
+  descriptionEs: string;
+  isActive: boolean;
+  groupEn: string;
+  groupEs: string;
+  inCategorySlug: string[];
+  type: string;
+  rank: number;
+};
+
+const formSchema = z.object({
+  valueEn: z.string(),
+  valueEs: z.string(),
+  descriptionEn: z.string(),
+  descriptionEs: z.string(),
+  isActive: z.boolean(),
+  groupEn: z.string(),
+  groupEs: z.string(),
+  inCategorySlug: z.array(z.string()),
+  type: z.string(),
+  rank: z.number(),
+}).required();
+
+interface KeyValueProps {
+  label: string;
+  value: React.ReactNode;
+  className?: string;
+}
+
+const KeyValue = ({ label, value, className = '' }: KeyValueProps) => (
+  <p className={className}>
+    <strong>{label}:</strong> {value}
+  </p>
+);
+
 import {
   Card,
   CardContent,
@@ -7,13 +70,202 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { trpc } from "@/util/trpc";
+
+// Form Component
+const FormComponent = ({ formValue }: { formValue: any }) => {
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema) as any, // Type assertion to handle the resolver type
+    defaultValues: {
+      valueEn: formValue.valueEn || '',
+      valueEs: formValue.valueEs || '',
+      descriptionEn: formValue.descriptionEn || '',
+      descriptionEs: formValue.descriptionEs || '',
+      isActive: formValue.isActive || false,
+      groupEn: formValue.groupEn || '',
+      groupEs: formValue.groupEs || '',
+      inCategorySlug: Array.isArray(formValue.inCategorySlug) 
+        ? formValue.inCategorySlug 
+        : [formValue.inCategorySlug || ''].filter(Boolean) as string[],
+      type: formValue.type || '',
+      rank: formValue.rank || 0,
+    },
+  });
+
+  const onSubmit: SubmitHandler<FormValues> = (data) => {
+    console.log('Form submitted:', data);
+  };
+
+  // Reset form when formValue changes
+  useEffect(() => {
+    const defaultValues: FormValues = {
+      valueEn: formValue.valueEn || '',
+      valueEs: formValue.valueEs || '',
+      descriptionEn: formValue.descriptionEn || '',
+      descriptionEs: formValue.descriptionEs || '',
+      isActive: formValue.isActive || false,
+      groupEn: formValue.groupEn || '',
+      groupEs: formValue.groupEs || '',
+      inCategorySlug: Array.isArray(formValue.inCategorySlug) 
+        ? formValue.inCategorySlug 
+        : [formValue.inCategorySlug || ''].filter(Boolean),
+      type: formValue.type || '',
+      rank: formValue.rank || 0,
+    };
+    form.reset(defaultValues);
+  }, [formValue, form]);
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+          <div className="space-y-2">
+            <Label>EN</Label>
+            <Input {...form.register('valueEn')} />
+          </div>
+          <div className="space-y-2">
+            <Label>ES</Label>
+            <Input {...form.register('valueEs')} />
+          </div>
+          <div className="space-y-2 flex items-center gap-2">
+            <Switch
+              id="isActive"
+              checked={form.watch('isActive')}
+              onCheckedChange={(checked) => form.setValue('isActive', checked)}
+            />
+            <Label htmlFor="isActive">Active</Label>
+          </div>
+          <div className="space-y-2">
+            <Label>Group EN</Label>
+            <Input {...form.register('groupEn')} />
+          </div>
+          <div className="space-y-2">
+            <Label>Group ES</Label>
+            <Input {...form.register('groupEs')} />
+          </div>
+          <div className="space-y-2">
+            <Label>Categories</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  className="w-full justify-between"
+                >
+                  {form.watch('inCategorySlug')?.length > 0
+                    ? form.watch('inCategorySlug').join(', ')
+                    : 'Select categories...'}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[300px] p-0">
+                <Command>
+                  <CommandInput placeholder="Search categories..." />
+                  <CommandEmpty>No categories found.</CommandEmpty>
+                  <CommandGroup className="max-h-[200px] overflow-y-auto">
+                    {form.watch('inCategorySlug')?.map((slug: string) => (
+                      <CommandItem
+                        key={slug}
+                        onSelect={() => {
+                          form.setValue(
+                            'inCategorySlug',
+                            form.watch('inCategorySlug').filter((s: string) => s !== slug)
+                          );
+                        }}
+                        className="cursor-pointer"
+                      >
+                        <div className="flex items-center">
+                          <span className="mr-2">✓</span>
+                          {slug}
+                        </div>
+                      </CommandItem>
+                    ))}
+                    <CommandItem
+                      onSelect={() => {
+                        const newCategory = prompt('Enter a new category:');
+                        if (newCategory && !form.watch('inCategorySlug').includes(newCategory)) {
+                          form.setValue('inCategorySlug', [...form.watch('inCategorySlug'), newCategory]);
+                        }
+                      }}
+                      className="cursor-pointer text-muted-foreground"
+                    >
+                      + Add new category
+                    </CommandItem>
+                  </CommandGroup>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {form.watch('inCategorySlug')?.map((slug: string) => (
+                <span
+                  key={slug}
+                  className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary"
+                >
+                  {slug}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      form.setValue(
+                        'inCategorySlug',
+                        form.watch('inCategorySlug').filter((s: string) => s !== slug)
+                      );
+                    }}
+                    className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary/20 hover:bg-primary/30"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Type</Label>
+            <Input {...form.register('type')} />
+          </div>
+          <div className="space-y-2">
+            <Label>Rank</Label>
+            <Input type="number" {...form.register('rank', { valueAsNumber: true })} />
+          </div>
+          <div className="space-y-2">
+            <Label>Created</Label>
+            <Input value={formValue.createdAt} disabled />
+          </div>
+          <div className="space-y-2">
+            <Label>Updated</Label>
+            <Input value={formValue.updatedAt} disabled />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label>EN Description</Label>
+            <Input {...form.register('descriptionEn')} />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label>ES Description</Label>
+            <Input {...form.register('descriptionEs')} />
+          </div>
+          {formValue.deletedAt && (
+            <div className="space-y-2">
+              <Label>Deleted</Label>
+              <Input value={formValue.deletedAt} disabled />
+            </div>
+          )}
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={() => form.reset()}>
+            Reset
+          </Button>
+          <Button type="submit">Save Changes</Button>
+        </div>
+      </form>
+    </Form>
+  );
+};
+
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@radix-ui/react-accordion";
-import { LoaderCircle } from "lucide-react";
+
 
 export default function Page() {
   const formFields = trpc.example.getFormFields.useQuery({
@@ -37,37 +289,17 @@ export default function Page() {
 
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm text-muted-foreground">
-                  <p>
-                    <strong>Slug:</strong> {formField.formFieldSlug}
-                  </p>
-                  <p>
-                    <strong>ES Label:</strong> {formField.labelEs}
-                  </p>
-                  <p>
-                    <strong>Type:</strong> {formField.componentType}
-                  </p>
-                  <p>
-                    <strong>Form Step:</strong> {formField.formStepId}
-                  </p>
-                  <p>
-                    <strong>Column:</strong> {formField.columnName}
-                  </p>
-                  <p>
-                    <strong>Table:</strong> {formField.tableName}
-                  </p>
-                  <p>
-                    <strong>Active:</strong> {formField.isActive ? "Yes" : "No"}
-                  </p>
-                  <p>
-                    <strong>Created:</strong> {formField.createdAt}
-                  </p>
-                  <p>
-                    <strong>Updated:</strong> {formField.updatedAt}
-                  </p>
+                  <KeyValue label="Slug" value={formField.formFieldSlug} />
+                  <KeyValue label="ES Label" value={formField.labelEs} />
+                  <KeyValue label="Type" value={formField.componentType} />
+                  <KeyValue label="Form Step" value={formField.formStepId} />
+                  <KeyValue label="Column" value={formField.columnName} />
+                  <KeyValue label="Table" value={formField.tableName} />
+                  <KeyValue label="Active" value={formField.isActive ? "Yes" : "No"} />
+                  <KeyValue label="Created" value={formField.createdAt} />
+                  <KeyValue label="Updated" value={formField.updatedAt} />
                   {formField.deletedAt && (
-                    <p>
-                      <strong>Deleted:</strong> {formField.deletedAt}
-                    </p>
+                    <KeyValue label="Deleted" value={formField.deletedAt} />
                   )}
                 </div>
 
@@ -80,7 +312,7 @@ export default function Page() {
                       >
                         <AccordionTrigger className="flex w-full items-center justify-between py-3 px-4 text-sm font-medium transition-all hover:bg-muted/50 [&[data-state=open]>svg]:rotate-180">
                           <span className="truncate">
-                            {formValue.formValueSlug}
+                           {formValue.valueEn}{" "} ({formValue.formValueSlug})
                           </span>
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -97,50 +329,8 @@ export default function Page() {
                             <path d="m6 9 6 6 6-6" />
                           </svg>
                         </AccordionTrigger>
-                        <AccordionContent className="w-full  py-3 px-4 text-sm font-medium transition-all hover:bg-muted/50 [&[data-state=open]>svg]:rotate-180 space-y-2 text-sm text-muted-foreground">
-                          <p>
-                            <strong>EN:</strong> {formValue.valueEn}
-                          </p>
-                          <p>
-                            <strong>ES:</strong> {formValue.valueEs}
-                          </p>
-                          <p>
-                            <strong>EN Desc:</strong> {formValue.descriptionEn}
-                          </p>
-                          <p>
-                            <strong>ES Desc:</strong> {formValue.descriptionEs}
-                          </p>
-                          <p>
-                            <strong>Active:</strong>{" "}
-                            {formValue.isActive ? "Yes" : "No"}
-                          </p>
-                          <p>
-                            <strong>Group EN:</strong> {formValue.groupEn}
-                          </p>
-                          <p>
-                            <strong>Group ES:</strong> {formValue.groupEs}
-                          </p>
-                          <p>
-                            <strong>Category:</strong>{" "}
-                            {formValue.inCategorySlug}
-                          </p>
-                          <p>
-                            <strong>Type:</strong> {formValue.type}
-                          </p>
-                          <p>
-                            <strong>Rank:</strong> {formValue.rank}
-                          </p>
-                          <p>
-                            <strong>Created:</strong> {formValue.createdAt}
-                          </p>
-                          <p>
-                            <strong>Updated:</strong> {formValue.updatedAt}
-                          </p>
-                          {formValue.deletedAt && (
-                            <p>
-                              <strong>Deleted:</strong> {formValue.deletedAt}
-                            </p>
-                          )}
+                        <AccordionContent className="w-full py-3 px-4 text-sm font-medium transition-all hover:bg-muted/50 [&[data-state=open]>svg]:rotate-180">
+                          <FormComponent formValue={formValue} />
                         </AccordionContent>
                       </AccordionItem>
                     ))}
@@ -154,3 +344,4 @@ export default function Page() {
     </div>
   );
 }
+                       
