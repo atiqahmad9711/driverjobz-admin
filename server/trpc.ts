@@ -1,10 +1,10 @@
 // server/trpc.ts
 import { initTRPC, TRPCError } from "@trpc/server";
 import { verify } from "jsonwebtoken";
-import { IncomingMessage, ServerResponse } from "http";
 import type { PrismaClient } from "@prisma/client";
 import prisma from "@/util/prismaClient";
 import { config } from "@/config/config";
+import { NextRequest } from "next/server";
 
 // Define the shape of the user in the context
 export type UserContext = {
@@ -14,47 +14,43 @@ export type UserContext = {
 
 // Extend the context to include the user
 export type Context = {
-  req?: IncomingMessage;
-  res?: ServerResponse;
+  req?: NextRequest;
   user?: UserContext;
   prisma: PrismaClient;
+  resHeaders: Headers;
 };
 
 // Helper function to get the token from the request
-const getToken = (req?: IncomingMessage): string | null => {
-  if (!req?.headers.cookie) return null;
+const getToken = (req?: NextRequest): string | null => {
+  if (!req?.cookies.get('auth-token')) return null;
   
-  const cookies = req.headers.cookie.split(';').reduce((acc, cookie) => {
-    const [key, value] = cookie.trim().split('=');
-    acc[key] = value;
-    return acc;
-  }, {} as Record<string, string>);
+  const cookies = req.cookies.get('auth-token');
   
-  return cookies['auth-token'] || null;
+  return cookies?.value || null;
 };
 
 // Create the tRPC instance with context
-export const createContext = async ({ req, res }: { req?: IncomingMessage; res?: ServerResponse } = {}): Promise<Context> => {
+export const createContext = async ({ req }: { req?: NextRequest } = {}): Promise<Context> => {
   const token = getToken(req);
   
   if (!token) {
-    return { req, res, prisma: prisma };
+    return { req, prisma: prisma, resHeaders: new Headers() };
   }
   
   try {
     const decoded = verify(token, config.be.auth.secret || 'your-secret-key') as UserContext;
     return {
       req,
-      res,
       user: {
         userId: decoded.userId,
         roles: decoded.roles || [],
       },
-      prisma: prisma
+      prisma: prisma,
+      resHeaders: new Headers(),
     };
   } catch (error) {
     console.error('Failed to verify token:', error);
-    return { req, res, prisma: prisma };
+    return { req, prisma: prisma, resHeaders: new Headers() };
   }
 };
 

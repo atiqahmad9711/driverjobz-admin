@@ -68,12 +68,15 @@ export const authRouter = router({
       );
 
       // 6. Set HTTP-only cookie
-      if (ctx.res) {
-        ctx.res.setHeader(
+      if (ctx.req) {
+        // set header
+        ctx.resHeaders.set(
           "Set-Cookie",
           `auth-token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`
         );
       }
+      
+      
 
       // 7. Return user data without sensitive information
       return {
@@ -121,8 +124,8 @@ export const authRouter = router({
   
   // Logout
   logout: publicProcedure.mutation(({ ctx }) => {
-    if (ctx.res) {
-      ctx.res.setHeader(
+    if (ctx.req) {
+      ctx.resHeaders.set(
         "Set-Cookie",
         "auth-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax"
       );

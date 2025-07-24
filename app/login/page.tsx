@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -8,16 +9,21 @@ import { loginSchema } from "@/schemas/auth";
 import { trpc } from "@/util/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useSession } from "@/components/auth/session-provider";
+import { Loader2 } from "lucide-react";
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
+  const { isAuthenticated, isLoading } = useSession();
+  
   const login = trpc.auth.login.useMutation({
     onSuccess: () => {
+      // The auth token is already set as an HTTP-only cookie by the server
+      // Just redirect to the home page
       router.push('/');
       router.refresh();
     },
@@ -30,6 +36,24 @@ export default function LoginPage() {
       password: "",
     },
   });
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      router.push('/');
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  // Show loading state while checking auth status
+  if (isLoading || isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  
 
   const onSubmit = async (data: LoginFormValues) => {
     try {
