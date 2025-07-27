@@ -6,6 +6,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar"
 import { useSession } from "@/components/auth/session-provider"
 import { LogoutButton } from "@/components/auth/logout-button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ThemeToggle } from "@/components/theme-toggle"
 import Link from "next/link"
 
 export function SiteHeader() {
@@ -45,6 +46,9 @@ export function SiteHeader() {
               GitHub
             </a>
           </Button>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+          </div>
         </div>
       </div>
     </header>

@@ -4,6 +4,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { TRPCProvider } from "@/providers/trpc-provider";
+import { ThemeProvider } from "@/components/theme-provider"
 import { AppLayout } from "@/components/layout/app-layout";
 import { Navbar } from "@/components/navbar";
 
@@ -20,7 +21,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <TRPCProvider>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <TRPCProvider>
           <AppLayout>
             {/* <Navbar /> */}
             <main className="container">
@@ -41,6 +43,7 @@ export default function RootLayout({
             </main>
           </AppLayout>
         </TRPCProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
