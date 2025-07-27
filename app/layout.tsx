@@ -22,8 +22,8 @@ export default function RootLayout({
       <body>
         <TRPCProvider>
           <AppLayout>
-            <Navbar />
-            <main className="container py-6">
+            {/* <Navbar /> */}
+            <main className="container">
               <SidebarProvider
                 style={
                   {
