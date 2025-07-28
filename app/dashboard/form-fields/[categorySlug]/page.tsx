@@ -49,6 +49,7 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
+import { useState } from "react";
 import { trpc } from "@/util/trpc";
 import FormValuesData from "./_components/form-values-data";
 
@@ -57,14 +58,28 @@ export default function Page({
 }: {
   params: { categorySlug: string };
 }) {
+  const [typeFilter, setTypeFilter] = useState<string>("");
+
   const formFields = trpc.example.getFormFields.useQuery({
     categorySlug: params.categorySlug,
+    type: typeFilter as "job" | "driver" || undefined,
   });
 
   return (
     <div className="flex flex-1 flex-col">
       <div className="@container/main flex flex-1 flex-col gap-2">
         <div className="flex flex-col gap-6 py-6 px-4 md:gap-8 md:py-8 lg:px-8">
+          <div className="flex justify-end">
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="rounded-md border p-2"
+            >
+              <option value="">All Types</option>
+              <option value="job">Job</option>
+              <option value="driver">Driver</option>
+            </select>
+          </div>
           {formFields.isLoading ? (
             <>
               <LoaderCircle className="animate-spin" />
