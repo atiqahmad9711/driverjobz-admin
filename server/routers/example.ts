@@ -12,7 +12,7 @@ export const appRouter = router({
       };
     }),
   getFormFields: publicProcedure
-    .input(z.object({ categorySlug: z.string() }))
+    .input(z.object({ categorySlug: z.string(), type: z.enum(["job", "driver"]).optional().nullable() }))
     .query(async ({ input }) => {
       const formFields = await prisma.formField.findMany({
         where: {
@@ -20,9 +20,13 @@ export const appRouter = router({
             some: {
               inCategorySlug: {
                 has: input.categorySlug,
+
               },
             },
           },
+          formFieldSlug: {
+            contains: input.type ?? "",
+          }
         },
 
         include: {
@@ -30,6 +34,7 @@ export const appRouter = router({
             where: {
               inCategorySlug: {
                 has: input.categorySlug,
+              
               },
             },
           },

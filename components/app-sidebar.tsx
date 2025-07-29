@@ -46,6 +46,12 @@ const data = {
       icon: IconDashboard,
     },
     {
+      title: "Categories",
+      url: "/dashboard/categories",
+      icon: IconListDetails,
+      
+    },
+    {
       title: "Lifecycle",
       url: "#",
       icon: IconListDetails,
