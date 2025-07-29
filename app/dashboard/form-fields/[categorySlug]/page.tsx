@@ -1,40 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import { useForm, SubmitHandler } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Button } from "@/components/ui/button";
-import { Form } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { LoaderCircle, ChevronsUpDown } from "lucide-react";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+import { LoaderCircle } from "lucide-react";
 
-interface KeyValueProps {
-  label: string;
-  value: React.ReactNode;
-  className?: string;
-}
-
-const KeyValue = ({ label, value, className = "" }: KeyValueProps) => (
-  <p className={className}>
-    <strong>{label}:</strong> {value}
-  </p>
-);
 
 import {
   Accordion,
@@ -49,22 +16,50 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
+import { useState } from "react";
 import { trpc } from "@/util/trpc";
 import FormValuesData from "./_components/form-values-data";
+import { useParams, useSearchParams } from "next/navigation";
 
-export default function Page({
-  params,
-}: {
-  params: { categorySlug: string };
-}) {
+
+interface KeyValueProps {
+  label: string;
+  value: React.ReactNode;
+  className?: string;
+}
+
+const KeyValue = ({ label, value, className = "" }: KeyValueProps) => (
+  <p className={className}>
+    <strong>{label}:</strong> {value}
+  </p>
+);
+
+
+export default function Page() {
+  const [typeFilter, setTypeFilter] = useState<string>("");
+  // const params = useSearchParams();
+  const params = useParams();
+
   const formFields = trpc.example.getFormFields.useQuery({
-    categorySlug: params.categorySlug,
+    categorySlug: params.categorySlug as string,
+    type: typeFilter as "job" | "driver" || undefined,
   });
 
   return (
     <div className="flex flex-1 flex-col">
       <div className="@container/main flex flex-1 flex-col gap-2">
         <div className="flex flex-col gap-6 py-6 px-4 md:gap-8 md:py-8 lg:px-8">
+          <div className="flex justify-end">
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="rounded-md border p-2"
+            >
+              <option value="">All Types</option>
+              <option value="job">Job</option>
+              <option value="driver">Driver</option>
+            </select>
+          </div>
           {formFields.isLoading ? (
             <>
               <LoaderCircle className="animate-spin" />

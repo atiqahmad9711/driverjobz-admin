@@ -6,7 +6,6 @@ export const config = {
         },
         auth: {
             secret: process.env.NEXTAUTH_SECRET,
-            url: process.env.NEXTAUTH_URL,
         }
     },
     fe:{

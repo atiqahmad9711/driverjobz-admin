@@ -38,7 +38,7 @@ const formSchema = formValueSchema.extend({
 });
 
 // Form Component
-const FormValuesData = ({ formValue }: { formValue: any }) => {
+const FormValuesData = ({ formValue }: { formValue: FormValues }) => {
 
   const categories = trpc.category.getCategories.useQuery({});
   const utils = trpc.useUtils();
@@ -108,7 +108,7 @@ const FormValuesData = ({ formValue }: { formValue: any }) => {
     const defaultValues: FormValues = {
       formValueId: formValue.formValueId,
       formValueSlug: formValue.formValueSlug || "",
-      formFieldId: formValue.formFieldId || undefined,
+      formFieldId: formValue.formFieldId,
       valueEn: formValue.valueEn || "",
       valueEs: formValue.valueEs || "",
       descriptionEn: formValue.descriptionEn || "",
@@ -222,11 +222,11 @@ const FormValuesData = ({ formValue }: { formValue: any }) => {
         </div>
         <div className="space-y-2">
           <Label>Created</Label>
-          <Input value={formValue.createdAt} disabled />
+          <Input value={formValue?.createdAt?.toString()} disabled />
         </div>
         <div className="space-y-2">
           <Label>Updated</Label>
-          <Input value={formValue.updatedAt} disabled />
+          <Input value={formValue?.updatedAt?.toString()} disabled />
         </div>
         <div className="space-y-2 sm:col-span-2">
           <Label>EN Description</Label>
@@ -239,7 +239,7 @@ const FormValuesData = ({ formValue }: { formValue: any }) => {
         {formValue.deletedAt && (
           <div className="space-y-2">
             <Label>Deleted</Label>
-            <Input value={formValue.deletedAt} disabled />
+            <Input value={formValue.deletedAt?.toString()} disabled />
           </div>
         )}
       </div>
