@@ -1,40 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import { useForm, SubmitHandler } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Button } from "@/components/ui/button";
-import { Form } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { LoaderCircle, ChevronsUpDown } from "lucide-react";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+import { LoaderCircle } from "lucide-react";
 
-interface KeyValueProps {
-  label: string;
-  value: React.ReactNode;
-  className?: string;
-}
-
-const KeyValue = ({ label, value, className = "" }: KeyValueProps) => (
-  <p className={className}>
-    <strong>{label}:</strong> {value}
-  </p>
-);
 
 import {
   Accordion,
@@ -52,16 +19,29 @@ import {
 import { useState } from "react";
 import { trpc } from "@/util/trpc";
 import FormValuesData from "./_components/form-values-data";
+import { useParams, useSearchParams } from "next/navigation";
 
-export default function Page({
-  params,
-}: {
-  params: { categorySlug: string };
-}) {
+
+interface KeyValueProps {
+  label: string;
+  value: React.ReactNode;
+  className?: string;
+}
+
+const KeyValue = ({ label, value, className = "" }: KeyValueProps) => (
+  <p className={className}>
+    <strong>{label}:</strong> {value}
+  </p>
+);
+
+
+export default function Page() {
   const [typeFilter, setTypeFilter] = useState<string>("");
+  // const params = useSearchParams();
+  const params = useParams();
 
   const formFields = trpc.example.getFormFields.useQuery({
-    categorySlug: params.categorySlug,
+    categorySlug: params.categorySlug as string,
     type: typeFilter as "job" | "driver" || undefined,
   });
 

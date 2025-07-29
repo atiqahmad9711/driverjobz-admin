@@ -25,7 +25,7 @@ import { useForm, SubmitHandler, Form } from "react-hook-form";
 import { z } from "zod";
 
 // Use the schema type directly from our shared schema
-type FormValues = z.infer<typeof formValueSchema>;
+type FormValuesType = z.infer<typeof formValueSchema>;
 
 // Create a form-specific schema that matches our form requirements
 const formSchema = formValueSchema.extend({
@@ -38,7 +38,7 @@ const formSchema = formValueSchema.extend({
 });
 
 // Form Component
-const FormValuesData = ({ formValue }: { formValue: any }) => {
+const FormValuesData = ({ formValue }: { formValue: FormValuesType }) => {
 
   const categories = trpc.category.getCategories.useQuery({});
   const utils = trpc.useUtils();
@@ -50,7 +50,7 @@ const FormValuesData = ({ formValue }: { formValue: any }) => {
     },
   });
 
-  const form = useForm<FormValues>({
+  const form = useForm<FormValuesType>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       formValueId: formValue.formValueId,
@@ -73,7 +73,7 @@ const FormValuesData = ({ formValue }: { formValue: any }) => {
     },
   });
 
-  const onSubmit: SubmitHandler<FormValues> = async (data) => {
+  const onSubmit: SubmitHandler<FormValuesType> = async (data) => {
     try {
       // Convert form data to match the expected input type
       const updateData = {
@@ -105,10 +105,10 @@ const FormValuesData = ({ formValue }: { formValue: any }) => {
 
   // Reset form when formValue changes
   useEffect(() => {
-    const defaultValues: FormValues = {
+    const defaultValues: FormValuesType = {
       formValueId: formValue.formValueId,
       formValueSlug: formValue.formValueSlug || "",
-      formFieldId: formValue.formFieldId || undefined,
+      formFieldId: formValue.formFieldId,
       valueEn: formValue.valueEn || "",
       valueEs: formValue.valueEs || "",
       descriptionEn: formValue.descriptionEn || "",
@@ -222,11 +222,11 @@ const FormValuesData = ({ formValue }: { formValue: any }) => {
         </div>
         <div className="space-y-2">
           <Label>Created</Label>
-          <Input value={formValue.createdAt} disabled />
+          <Input value={formValue.createdAt?.toString()} disabled />
         </div>
         <div className="space-y-2">
           <Label>Updated</Label>
-          <Input value={formValue.updatedAt} disabled />
+          <Input value={formValue.updatedAt?.toString()} disabled />
         </div>
         <div className="space-y-2 sm:col-span-2">
           <Label>EN Description</Label>
@@ -239,7 +239,7 @@ const FormValuesData = ({ formValue }: { formValue: any }) => {
         {formValue.deletedAt && (
           <div className="space-y-2">
             <Label>Deleted</Label>
-            <Input value={formValue.deletedAt} disabled />
+            <Input value={formValue.deletedAt?.toString()} disabled />
           </div>
         )}
       </div>

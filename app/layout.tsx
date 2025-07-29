@@ -2,11 +2,10 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TRPCProvider } from "@/providers/trpc-provider";
 import { ThemeProvider } from "@/components/theme-provider"
 import { AppLayout } from "@/components/layout/app-layout";
-import { Navbar } from "@/components/navbar";
 
 export const metadata: Metadata = {
   title: "DriverJobz Admin",
