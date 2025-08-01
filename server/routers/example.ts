@@ -12,35 +12,66 @@ export const appRouter = router({
       };
     }),
   getFormFields: publicProcedure
-    .input(z.object({ categorySlug: z.string(), type: z.enum(["job", "driver"]).optional().nullable() }))
+    .input(
+      z.object({
+        categorySlug: z.string(),
+        type: z.enum(["job", "driver"]).optional().nullable(),
+      })
+    )
     .query(async ({ input }) => {
       const formFields = await prisma.formField.findMany({
         where: {
           formValues: {
             some: {
-              inCategorySlug: {
-                has: input.categorySlug,
-
-              },
+              OR: [
+                {
+                  inCategorySlug: {
+                    equals: [],
+                  },
+                },
+                {
+                  inCategorySlug: {
+                    equals: null,
+                  },
+                },
+                {
+                  inCategorySlug: {
+                    has: input.categorySlug,
+                  },
+                },
+              ],
             },
           },
           formFieldSlug: {
             contains: input.type ?? "",
-          }
+          },
         },
 
         include: {
           formValues: {
             where: {
-              inCategorySlug: {
-                has: input.categorySlug,
-              
-              },
+              OR: [
+                {
+                  inCategorySlug: {
+                    equals: [],
+                  },
+                },
+                {
+                  inCategorySlug: {
+                    equals: null,
+                  },
+                },
+                {
+                  inCategorySlug: {
+                    has: input.categorySlug,
+                  },
+                },
+              ],
             },
           },
         },
       });
-      
+
       return formFields;
     }),
 });
