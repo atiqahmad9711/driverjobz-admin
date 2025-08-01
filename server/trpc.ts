@@ -79,7 +79,7 @@ export const protectedProcedure = t.procedure.use(
     }
     
     // Check for admin role if required
-    const isAdmin = ctx.user.roles.includes('ADMIN');
+    const isAdmin = ctx.user.roles.includes('admin');
     if (!isAdmin) {
       throw new TRPCError({
         code: 'FORBIDDEN',
