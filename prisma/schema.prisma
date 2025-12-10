@@ -170,11 +170,6 @@ model User {
   blockedByUsers      Block[]          @relation("BlockedByUsers")
 }
 
-  jobPostings JobPosting[] @relation("UserToJobPosting")
-  flaggedJobPost FlagJobPost[]
-  flaggedDriver FlagDriver[]
-}
-
 model Role {
   roleId      Int       @id @map("role_id")
   slug        String    @unique
