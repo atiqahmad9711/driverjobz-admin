@@ -154,9 +154,21 @@ model User {
   status                ProfileStatus? @default(PENDING) @map("status")
 
   // Relations
-  roles   Role[]
-  company Company[]
-  driver  Driver?
+  roles               Role[]
+  company             Company[]
+  driver              Driver?
+  savedJobs           JobPosting[]
+  savedDrivers        Driver[]         @relation("UserToDriver")
+  appliedJobs         AppliedJob[]
+  connectionRequest   Connection[]     @relation("ConnectionRequester")
+  connectionAddressee Connection[]     @relation("ConnectionAddressee")
+  preHirePackages     PreHirePackage[]
+  jobPostings         JobPosting[]     @relation("UserToJobPosting")
+  flaggedJobPost      FlagJobPost[]
+  flaggedDriver       FlagDriver[]
+  blockedUsers        Block[]          @relation("BlockedUsers")
+  blockedByUsers      Block[]          @relation("BlockedByUsers")
+}
 
   jobPostings JobPosting[] @relation("UserToJobPosting")
   flaggedJobPost FlagJobPost[]
@@ -177,57 +189,59 @@ model Role {
 }
 
 model Company {
-  companyId                   Int          @id @default(autoincrement()) @map("company_id")
-  userId                      Int          @map("user_id")
-  legalName                   String?      @map("legal_name")
+  companyId                   Int              @id @default(autoincrement()) @map("company_id")
+  userId                      Int              @map("user_id")
+  legalName                   String?          @map("legal_name")
   name                        String?
-  firstName                   String?      @map("first_name")
-  lastName                    String?      @map("last_name")
-  companyType                 String[]     @map("company_type")
-  fmcsaVerified               Boolean?     @map("fmcsa_verified")
-  companyLogo                 String?      @map("company_logo")
-  yearsInBusiness             String?      @map("years_in_business")
-  usDotNumber                 String?      @map("us_dot_number")
-  mcNumber                    String?      @map("mc_number")
-  einNumber                   String?      @map("ein_number")
-  numberOfVehicles            String?      @map("number_of_vehicles")
-  numberOfDrivers             String?      @map("number_of_drivers")
-  vehicleTypes                String[]     @map("vehicle_types")
-  primaryOperatingAreas       String[]     @map("primary_operating_areas")
-  positionsNeeded             String[]     @map("positions_needed")
-  annualHiringVolume          String?      @map("annual_hiring_volume")
-  backgroundCheckRequirements String[]     @map("background_check_requirements")
-  certificationsRequired      String[]     @map("certifications_required")
-  payMethods                  String[]     @map("pay_methods")
-  standardBenefits            String[]     @map("standard_benefits")
-  specialPrograms             String[]     @map("special_programs")
-  trainingProvided            String[]     @map("training_provided")
-  payDuringTraining           String[]     @map("pay_during_training")
-  paymentMethod               String[]     @map("payment_method")
-  billingCycle                String[]     @map("billing_cycle")
-  defaultPostDuration         String?      @map("default_post_duration")
-  autoRenewPosts              Boolean?     @map("auto_renew_posts")
-  screeningPreferences        String[]     @map("screening_preferences")
-  candidateUpdates            String[]     @map("candidate_updates")
-  termsOfService              Boolean?     @map("terms_of_service")
-  informationAccuracy         Boolean?     @map("information_accuracy")
-  eeoCompliance               Boolean?     @map("eeo_compliance")
-  createdAt                   DateTime     @default(now()) @map("created_at")
-  updatedAt                   DateTime     @default(now()) @updatedAt @map("updated_at")
-  deletedAt                   DateTime?    @map("deleted_at")
-  headquartersAddress         String?      @map("headquarters_address")
-  apartmentNumber             String?      @map("apartment_number")
+  firstName                   String?          @map("first_name")
+  lastName                    String?          @map("last_name")
+  companyType                 String[]         @map("company_type")
+  fmcsaVerified               Boolean?         @map("fmcsa_verified")
+  companyLogo                 String?          @map("company_logo")
+  yearsInBusiness             String?          @map("years_in_business")
+  usDotNumber                 String?          @map("us_dot_number")
+  mcNumber                    String?          @map("mc_number")
+  einNumber                   String?          @map("ein_number")
+  numberOfVehicles            String?          @map("number_of_vehicles")
+  numberOfDrivers             String?          @map("number_of_drivers")
+  vehicleTypes                String[]         @map("vehicle_types")
+  primaryOperatingAreas       String[]         @map("primary_operating_areas")
+  positionsNeeded             String[]         @map("positions_needed")
+  annualHiringVolume          String?          @map("annual_hiring_volume")
+  backgroundCheckRequirements String[]         @map("background_check_requirements")
+  certificationsRequired      String[]         @map("certifications_required")
+  payMethods                  String[]         @map("pay_methods")
+  standardBenefits            String[]         @map("standard_benefits")
+  specialPrograms             String[]         @map("special_programs")
+  trainingProvided            String[]         @map("training_provided")
+  payDuringTraining           String[]         @map("pay_during_training")
+  paymentMethod               String[]         @map("payment_method")
+  billingCycle                String[]         @map("billing_cycle")
+  defaultPostDuration         String?          @map("default_post_duration")
+  autoRenewPosts              Boolean?         @map("auto_renew_posts")
+  screeningPreferences        String[]         @map("screening_preferences")
+  candidateUpdates            String[]         @map("candidate_updates")
+  termsOfService              Boolean?         @map("terms_of_service")
+  informationAccuracy         Boolean?         @map("information_accuracy")
+  eeoCompliance               Boolean?         @map("eeo_compliance")
+  createdAt                   DateTime         @default(now()) @map("created_at")
+  updatedAt                   DateTime         @default(now()) @updatedAt @map("updated_at")
+  deletedAt                   DateTime?        @map("deleted_at")
+  headquartersAddress         String?          @map("headquarters_address")
+  apartmentNumber             String?          @map("apartment_number")
   street                      String?
   city                        Int?
   state                       Int?
   zipCode                     String?      @map("zip_code")
   website                     String?
-  terminalLocations           String[]     @map("terminal_locations")
+  terminalLocations           String[]         @map("terminal_locations")
   email                       String?
-  phoneNumber                 String?      @map("phone_number")
-  noDotOrMcNumber             Boolean      @default(true) @map("no_dot_or_mc_number")
-  user                        User         @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  phoneNumber                 String?          @map("phone_number")
+  noDotOrMcNumber             Boolean          @default(true) @map("no_dot_or_mc_number")
+  user                        User             @relation(fields: [userId], references: [userId], onDelete: Cascade)
   JobPosting                  JobPosting[]
+  preHirePackages             PreHirePackage[]
+  hiredDrivers                HiredDriver[]
 }
 
 model Multimedia {
@@ -296,6 +310,23 @@ model Driver {
   isDriverLicenseSuspended                      Boolean                @default(false) @map("is_driver_license_suspended")
   briefDescriptionOfSuspension                  String?                @map("brief_description_of_suspension")
   userId                                        Int                    @map("user_id")
+  isConvictedTrafficOffenseLast3Years           Boolean                @default(false) @map("is_convicted_traffic_offense_last_3_years")
+  numberOfTrafficOffenseLast3Years              Int?                   @map("number_of_traffic_offense_last_3_years")
+  briefDescriptionOfTrafficOffense              String?                @map("brief_description_of_traffic_offense")
+  havePointsOnDL                                Boolean                @default(false) @map("have_points_on_dl")
+  numberOfPointsOnDL                            Int?                   @map("number_of_points_on_dl")
+  briefDescriptionOfPointsOnDL                  String?                @map("brief_description_of_points_on_dl")
+  disqualifiedFromCDL                           Boolean                @default(false) @map("disqualified_from_cdl")
+  numberOfDisqualifiedFromCDL                   Int?                   @map("number_of_disqualified_from_cdl")
+  briefDescriptionDisqualifiedFromCDL           String?                @map("brief_description_disqualified_from_cdl")
+  convictedForDrivingUnderInfluence             Boolean                @default(false) @map("convicted_for_driving_under_influence")
+  briefDescriptionDrivingUnderInfluence         String?                @map("brief_description_driving_under_influence")
+
+  primaryVehicle    Int? @map("primary_vehicle")
+  vehiclePreference Int? @map("vehicle_preference")
+
+  holdValidDrivingLicense Boolean @default(false) @map("hold_valid_driving_license")
+  convictedOfFelony       Boolean @default(false) @map("convicted_of_felony")
 
   // step 1 - stage 3
   totalVerifiableCdlExperience Int?     @map("total_verifiable_cdl_experience") // Example: '0 Year', '10+ Years'
@@ -347,12 +378,12 @@ model Driver {
   workSplitShift Boolean? @map("work_split_shift")
 
   // bus aide step -1
-  totalVerifiableRelevantExperience Int? @map("total_verifiable_relevant_experience")
-  supervisionSkills                Int[] @map("supervision_skills")
-  assistanceSkills                 Int[] @map("assistance_skills")
-  otherSkills                      Int[] @map("other_skills")
-  physicalAbility                  Int[] @map("physical_ability")
-  
+  totalVerifiableRelevantExperience Int?  @map("total_verifiable_relevant_experience")
+  supervisionSkills                 Int[] @map("supervision_skills")
+  assistanceSkills                  Int[] @map("assistance_skills")
+  otherSkills                       Int[] @map("other_skills")
+  physicalAbility                   Int[] @map("physical_ability")
+
   // step 3
   cprCertification Boolean? @map("cpr_certification") @default(true)
   cprCertificationType Int? @map("cpr_certification_type")
@@ -372,10 +403,117 @@ model Driver {
   // step - 5
   preferredSchedule Int[] @map("preferred_schedule")
 
+  // Owner-Operator  Step 1
+  primarilyOperate             Int?     @map("primarily_Operate")
+  usDotNumber                  String?  @map("us_Dot_Number")
+  engineType                   Int?     @map("engine_Type")
+  requiresDEF                  Int?     @map("requires_DEF")
+  typicalOperationStyle        Int?     @map("typical_Operation_Style")
+  loadingPreference            Int?     @map("loading_Preference")
+  specializedFreightExperience String?  @map("specialized_Freight_Experience")
+  otherRelevantExperience      String[] @map("other_Relevant_Experience")
+
+  //Driver Sign-Up — Owner-Operator  Step 3
+
+  restrictionsNoted String? @map("restrictions_Noted")
+
+  // nemt step - 1
+
+  totalExperienceYears  Int?     @map("total_experience_years")
+  nemtVehicleType       String[] @map("nemt_vehicle_type")
+  passengerTransported  Int[]    @map("passenger_transported")
+  tripTypes             Int[]    @map("trip_types")
+  operationalExperience Int[]    @map("operational_experience")
+
+  dotRequired                     Boolean?  @default(false) @map("dot_required")
+  mavoCertification               Boolean?  @default(false) @map("mavo_certification")
+  mavoCertificationDate           DateTime? @map("mavo_certification_date")
+  mavoCertificateIssuingAgency    String?   @map("mavo_certificate_issuing_agency")
+  defensiveDrivingCourseCompleted Boolean?  @default(false) @map("defensive_driving_course_completed")
+
+  // step - 5
+  areaWillingToCover String? @map("area_willing_to_cover")
+  // EMT Driver Profile Fields (Stage 3) Step 1: Experience
+
+  emergencyVehicleTypes String[] @map("emergency_vehicle_types")
+  otherEmergencyVehicle String?  @map("other_emergency_vehicle")
+  levelOfCareProvided   Int?     @map("level_of_care_provided")
+  serviceTypeExperience Int[]    @map("service_type_experience")
+  skillsAndProcedures   Int[]    @map("skills_and_procedures")
+  // EMT Driver Profile Fields Step 3 of 5: Medical & Certifications
+
+  highestEmsCertificationLevel     String?   @map("highest_ems_certification_level")
+  otherLicenseType                 String?   @map("other_license_type")
+  stateEmsLicenseNumber            String?   @map("state_ems_license_number")
+  stateEmsLicenseState             Int?      @map("state_ems_license_state")
+  stateEmsLicenseExpiration        DateTime? @map("state_ems_license_expiration")
+  nremtCardNumber                  String?   @map("nremt_card_number")
+  nremtCardExpiration              DateTime? @map("nremt_card_expiration")
+  nremtCertified                   Int?      @map("nremt_certified")
+  nremtCertificationLevel          Int?      @map("nremt_certification_level")
+  advancedLifeSupportCertification String[]  @map("advanced_life_support_certification")
+  aclsExpirationDate               DateTime? @map("acls_expiration_date")
+  palsExpirationDate               DateTime? @map("pals_expiration_date")
+  phtlsExpirationDate              DateTime? @map("phtls_expiration_date")
+  otherAdvancedCert                String?   @map("other_advanced_cert")
+  otherAdvancedExpirationDate      DateTime? @map("other_advanced_expiration_date")
+  evocCertificate                  Int?      @map("evoc_certificate_type")
+  evocCertificationDate            DateTime? @map("evoc_certification_date")
+  evocIssuingAgency                String?   @map("evoc_issuing_agency")
+  dotMedicalCardExpirationDate     DateTime? @map("dot_medical_card_expiration_date")
+
+  // Step 5: EMT Consents, Availability & Review
+  willingToWorkOvertime Int? @map("willing_to_work_overtime")
+
+  //Step 1: Driving Experience (Delivery Driver)
+  deliveryVehicleUsage       Int?    @map("delivery_Vehicle_Usage")
+  vehicleTypeText            String? @map("vehicle_type_text")
+  vehicleModel               String? @map("vehicle_Model")
+  vehicleYear                Int?    @map("vehicle_Year")
+  insuranceCompany           String? @map("insurance_Company")
+  insuranceType              Int?    @map("insurance_type")
+  deliveryEnvironment        Int[]   @map("delivery_Environment")
+  otherGoodsDelivered        String? @map("other_Goods_Delivered")
+  loadingUnloadingExperience Int[]   @map("loading_Unloading_Experience")
+
+  //Step 1: Heavy Equipment Operator
+  compactionEquipment       Int[]    @map("compaction_Equipment")
+  otherSpecializedEquipment Int[]    @map("other_Specialized_Equipment")
+  craneCertifications       Boolean? @map("crane_Certifications")
+  cranesOperated            Int[]    @map("cranes_Operated")
+  equipmentSpecified        String?  @map("equipment_Specified")
+  projectTypeExperience     String[] @map("project_Type_Experience")
+  industrySpecified         String?  @map("industry_Specified")
+  // Step 1:  Rideshare Taxi Limo
+  platformsCompaniesDriven  Int[]    @map("platforms_Companies_Driven")
+  companyPlatformNames      String?  @map("company_Plat_form_Names")
+
+  // Step 1:  Dispatcher
+  emergencyServices               String? @map("emergency_Services")
+  specifyOtherIndustry            String? @map("specify_Other_Industry")
+  transportationManagementSystems Int[]   @map("transportation_Management_Systems")
+  freightMatching                 Int[]   @map("freight_Matching")
+  communicationTrackingSystems    Int[]   @map("communication_Tracking_Systems")
+  otherSoftware                   Int[]   @map("other_Software")
+  specifyOtherTMS                 String? @map("specify_Other_TMS")
+  workUnderPressure               Int?    @map("work_Under_Pressure")
+
+  // Step 1 to 5 :  Transit Bus
+  fareSystems                    Int[]    @map("fare_Systems")
+  vehicleOperationsSafety        Int[]    @map("vehicle_Operations_Safety")
+  airBrakeCertification          Boolean? @map("air_Brake_Certification")
+  assistanceTrainingCompleted    Boolean? @map("assistance_Training_Completed")
+  relevantTrainingCertifications Boolean? @map("relevant_Training_Certifications")
+  trainingProviderName           String?  @map("training_Provider_Name")
+  unionAffiliationPreference     Int?     @map("union_Affiliation_Preference")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   user                      User                       @relation(fields: [userId], references: [userId])
   driverEmploymentHistory   DriverEmploymentHistory[]
   driverOtherCertifications DriverOtherCertification[]
+  flags                     FlagDriver[]
   category                  TransportationCategory?    @relation(fields: [driverCategory], references: [transportationCategoryId])
   state                     State?                     @relation(fields: [dotExaminerState], references: [stateId])
   flags                     FlagDriver[]
@@ -427,6 +565,11 @@ model DriverEmploymentHistory {
   // step -2 bus
   typeOfEmployment Int? @map("type_of_employment")
 
+  // nemt
+  brokersPlatforms    String? @map("brokers_platforms")
+  verificationContact String? @map("verification_contact")
+  verificationPhone   String? @map("verification_phone")
+
   // Common fields
   startDate DateTime? @map("start_date")
   endDate   DateTime? @map("end_date") // Nullable if "Present"
@@ -434,6 +577,18 @@ model DriverEmploymentHistory {
 
   reasonForLeaving String?
   explanation      String? @map("explanation") @db.VarChar(250) // Required conditionally
+
+  // EMT Driver Profile Fields (Stage 3)  Step 2 of 5:  Employment History
+  operatedCdlVehicle Boolean? @map("operated_cdl_vehicle")
+
+  //Owner-Operator  Step 2
+  operatingBasis     Int?     @map("operating_Basis")
+  trailerTypesHauled Int[]    @map("trailer_Types_Hauledend")
+  operationNotes     String?  @map("operation_Notes")
+  dispatcherName     String?  @map("dispatcher_Name")
+  performanceHistory Boolean? @map("performance_History")
+  // Step 3: Rideshare Taxi Limo
+  specificPermits    Boolean? @map("specific_Permits")
 
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
@@ -521,7 +676,7 @@ model JobPosting {
   trailerAge     String?  @map("trailer_age")
 
   freightTypes        String[] @map("freight_types")
-  loadingRequirements String[] @map("loading_requirements")
+  loadingRequirements String[] @map("loading_requirements") // not used
   dropHookPercentage  String?  @map("drop_hook_percentage")
   avgLoadWeight       String?  @map("avg_load_weight")
 
@@ -561,7 +716,7 @@ model JobPosting {
   screeningChecks      String[] @map("screening_checks")
   physicalRequirements String[] @map("physical_requirements")
   physicalLiftingLimit Int?     @map("physical_lifting_limit")
-  otherPhysicalNotes   String?  @map("other_physical_notes")
+  otherPhysicalNotes   String?  @map("other_physical_notes") // not used
   minAge               Int?     @map("min_age")
   maxAge               Int?     @map("max_age")
   isOtherRequirements  Boolean? @map("is_other_requirements")
@@ -585,7 +740,7 @@ model JobPosting {
   vehicleFeatures                    String[] @map("vehicle_features")
   specialEquipmentDriverOperate      String[] @map("special_equipment_driver_operate")
   studentAgeGroup                    String[] @map("student_age_group")
-  experienceWithSpecialNeedsStudents String?  @map("experience_with_special_needs_students")
+  experienceWithSpecialNeedsStudents Int?     @map("experience_with_special_needs_students")
   needsSupported                     String[] @map("needs_supported")
   schoolDrivingExperience            Int?     @map("school_driving_experience")
   isCertificationRequired            Boolean? @map("is_certification_required")
@@ -607,11 +762,170 @@ model JobPosting {
   homeTimeFrequency       Int?     @map("home_time_frequency")
   customHomeTimeFrequency String?  @map("custom_home_time_frequency")
 
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
-  userId    Int?      @map("user_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  publishedAt DateTime  @default(now()) @map("published_at")
 
+  userId                      Int      @map("user_id")
+  primaryServiceArea          String?  @map("primary_service_area")
+  hasClosedLocation           Boolean? @default(false) @map("has_closed_location")
+  driveClosedLocation         String?  @map("drive_closed_location")
+  driveClosedLocationDistance Int?     @map("drive_closed_location_distance")
+  tripTypes                   String[] @map("trip_types")
+  vehicleProvided             Int?     @map("vehicle_provided")
+  personalVehicleType         String[] @map("personal_vehicle_type")
+  personalVehicleRequirements String[] @map("personal_vehicle_requirements")
+  // for inside the dropdown options
+  minimumVehicleYear          Int?     @map("minimum_vehicle_year")
+  sufficientSpaceFor          Int?     @map("sufficient_space_for")
+
+  passengersTransported             Int[]    @map("passengers_transported")
+  levelOfAssistance                 Int[]    @map("level_of_assistance")
+  operationViaBroker                Int?     @map("operation_via_broker")
+  primaryBroker                     String?  @map("primary_broker")
+  licenseOfDriver                   Int?     @map("license_of_driver")
+  minimumTimeHoldingValidLicense    Int?     @map("minimum_time_holding_valid_license")
+  dotMedicalCardRequired            Int?     @map("dot_medical_card_required")
+  specificExperiencePreferred       String[] @map("specific_experience_preferred")
+  cleanDrivingRecordHighlyPreferred Boolean? @default(false) @map("clean_driving_record_highly_preferred")
+  numberNoAtFaultAccidentsPast      Int?     @map("number_no_at_fault_accidents_past")
+  yearsNoAtFaultAccidentsPast       Int?     @map("years_no_at_fault_accidents_past")
+  workHours                         Int?     @map("work_hours")
+
+  // First time range
+  specificShiftDetailsFirstStartTime   String?     @map("specific_shift_details_first_start_time")
+  specificShiftDetailsFirstStartPeriod TimePeriod? @map("specific_shift_details_first_start_period")
+  specificShiftDetailsFirstEndTime     String?     @map("specific_shift_details_first_end_time")
+  specificShiftDetailsFirstEndPeriod   TimePeriod? @map("specific_shift_details_first_end_period")
+
+  // Second time range
+  specificShiftDetailsSecondStartTime   String?     @map("specific_shift_details_Second_start_time")
+  specificShiftDetailsSecondStartPeriod TimePeriod? @map("specific_shift_details_Second_start_period")
+  specificShiftDetailsSecondEndTime     String?     @map("specific_shift_details_Second_end_time")
+  specificShiftDetailsSecondEndPeriod   TimePeriod? @map("specific_shift_details_Second_end_period")
+
+  safetyDuties                 String[] @map("safety_duties")
+  specialNeedsResponsibilities String[] @map("special_needs_responsibilities")
+  additionalDuties             String[] @map("additional_duties")
+  educationalRequirement       Int?     @map("educational_requirement")
+  skills                       String[] @map("skills")
+  hasMeetStateRequirements     Boolean? @default(false) @map("has_meet_state_requirements")
+  typicalRouteEnvironments     Int[]    @map("typical_route_environments")
+  additionalRouteInfoDetails   String?  @map("additional_route_info_details")
+
+  populationPrimarilyServed Int[] @map("population_primarily_served")
+
+  specifyStateRequired String? @map("specify_state_required")
+
+  contractorType                      Int[]    @map("contractor_type")
+  operatingAuthority                  Int?     @map("operating_authority")
+  noOfTrucks                          Int?     @map("no_of_trucks")
+  primaryLaneInformation              String?  @map("primary_lane_information")
+  tractorTypes                        String[] @map("tractor_types")
+  specificTractorTypes                String?  @map("specific_tractor_types")
+  specifyHotshotTrailerType           String?  @map("specify_hotshot_trailer_type")
+  loadAvailability                    Int?     @map("load_availability")
+  deadheadMiles                       Int?     @map("deadhead_miles")
+  dispatchSupport                     Int[]    @map("dispatch_support")
+  primaryLiabilityInsurance           Int?     @map("primary_liability_insurance")
+  insuranceType                       Int?     @map("insurance_type")
+  minimumInsuranceLiabilityCoverage   Decimal? @map("minimum_insurance_liability_coverage") @db.Decimal(18, 4)
+  minimumPrimaryLiabilityCoverage     Decimal? @map("minimum_primary_liability_coverage") @db.Decimal(18, 4)
+  cargoInsurance                      Int?     @map("cargo_insurance")
+  minimumRequiredCargoCoverage        Decimal? @map("minimum_required_cargo_coverage") @db.Decimal(18, 4)
+  minimumCargoCapacityNeeded          String?  @map("minimum_cargo_capacity_needed")
+  otherInsurance                      Int[]    @map("other_insurance")
+  hasCompanyOffersInsurancePrograms   Boolean? @map("has_company_offers_insurance_programs")
+  detailsOfInsurancePrograms          String?  @map("details_of_insurance_programs")
+  permitProgramAvailable              Int?     @map("permit_program_available")
+  hasIFTAReportingAssistanceAvailable Boolean? @map("has_ifta_reporting_assistance_available")
+  electronicTollingAvailable          Boolean? @map("electronic_tolling_available")
+  fmcsaComplianceSupport              Boolean? @map("fmcsa_compliance_support")
+  eldSystemRequired                   Boolean? @map("eld_system_required")
+  compatibility                       Int?     @map("compatibility")
+  specificCompatibility               String?  @map("specific_compatibility")
+  otherTechnology                     String[] @map("other_technology")
+  keySellingPoints                    Int[]    @map("key_selling_points")
+  contractTermsSummary                String?  @map("contract_terms_summary")
+  estimatedTimeToStartHauling         String?  @map("estimated_time_to_start_hauling")
+  applicationDeadline                 String?  @map("application_deadline")
+  acceptableVehicleTypes              String[] @map("acceptable_vehicle_types")
+  specificVehicleRequirements         String[] @map("specific_vehicle_requirements")
+  otherSpecificVehicleRequirements    String?  @map("other_specific_vehicle_requirements")
+  additionalDetailsDrivingPolicy      String?  @map("additional_details_driving_policy")
+  deliveryTypes                       Int[]    @map("delivery_types")
+  customerInteractionLevel            Int?     @map("customer_interaction_level")
+  technologyUsed                      Int[]    @map("technology_used")
+  averageNumberOfDeliveriesPerShift   String?  @map("average_number_of_deliveries_per_shift")
+  applicationDocsList                 String[] @map("application_docs_list")
+  // For Heavy Equipment Operator
+  travelWillingnessType               Int?     @map("travel_willingness_type")
+  maintenanceResponsibility           Int?     @map("maintenance_responsibility")
+  teamStructure                       Int?     @map("team_structure")
+  projectDuration                     Int?     @map("project_duration")
+  usedGpsControl                      Int?     @map("used_gps_control")
+  equipmentAgeWithCondition           Int?     @map("equipment_age_with_condition")
+  equipmentModel                      String?  @map("equipment_model")
+  specificProjectTypeExpPreffred      String[] @map("specific_project_type_exp_preffred")
+  isCDLRequired                       Boolean? @default(false) @map("is_cdl_required")
+  cdlRequiredEndorsements             String[] @map("cdl_required_endorsements")
+
+  // New fields for Dispatcher
+  isOnsiteOrHybrid            Boolean? @default(false) @map("is_onsite_or_hybrid")
+  isRemoteOrHybrid            Boolean? @default(false) @map("is_remote_or_hybrid")
+  remoteWorkLocation          String?  @map("remote_work_location")
+  hybridWorkLocation          String?  @map("hybrid_work_location")
+  primaryDuties               String[] @map("primary_duties")
+  numOfPersonsPerShift        Int?     @map("num_of_persons_per_shift")
+  paceOfWorkEnvironment       Int?     @map("pace_of_work_environment")
+  decisionMakingAuthority     Int?     @map("decision_making_authority")
+  tmsDispatchSoftware         String[] @map("tms_dispatch_software")
+  isLoadBoards                Boolean? @default(false) @map("is_load_boards")
+  loadBoards                  String[] @map("load_boards")
+  communicationTracking       String[] @map("communication_tracking")
+  otherSoftwares              String[] @map("other_softwares")
+  minVerifiableDispatchExp    Int?     @map("min_verifiable_dispatch_exp")
+  typingSpeedRequirement      Int?     @map("typing_speed_requirement")
+  langRequirements            Int[]    @map("lang_requirements")
+  isDriverLicRequired         Boolean? @default(false) @map("is_driver_lic_required")
+  // New EMT Driver Fields
+  primaryServiceTypes         Int[]    @map("primary_service_types")
+  additionalScheduleDetails   String?  @map("additional_schedule_details")
+  estimateAnnualCallVol       Int?     @map("estimate_annual_call_vol")
+  usedProtocol                Int?     @map("used_protocol")
+  medicalDirectorOversight    String?  @map("medical_director_oversight")
+  ePcrUsedSystem              String?  @map("e_pcr_used_system")
+  minCertificationLevel       Int?     @map("min_certification_level")
+  requiredStateCertification  Int?     @map("required_state_certification")
+  nationalRegistryCertificate Int?     @map("national_registry_certificate")
+  specificDrivingLicClass     Int?     @map("specific_driving_lic_class")
+  cleanDrivingRecordRequired  Boolean? @default(false) @map("clean_driving_record_required")
+  minVerifiableEmsExp         Int?     @map("min_verifiable_ems_exp")
+  pickupCity                  Int?     @map("pickup_city")
+  pickupState                 Int?     @map("pickup_state")
+  // New Ride share Fields
+  serviceCatOffered           Int[]    @map("service_cat_offered")
+  empClassification           Int?     @map("emp_classification")
+  vehicleMake                 String?  @map("vehicle_make")
+  vehicleColor                String?  @map("vehicle_color")
+  isVehicleInspectionRequired Boolean? @map("is_vehicle_inspection_required")
+  vehicleAvailabilityOptions  String[] @map("vehicle_availability_options")
+  weeklyEstRentalRate         Decimal? @map("weekly_est_rental_rate") @db.Decimal(18, 4)
+  rentalLeaseIncludes         String[] @map("rental_lease_includes")
+  requiredDrivingLicenses     String[] @map("required_driving_licenses")
+  reqLicenseSpecificState     Int?     @map("req_license_specific_state")
+  isSpecialPermitRequired     Boolean? @map("is_special_permit_required")
+  specificPermit              String?  @map("specific_permit")
+  previousExperience          Int?     @map("previous_experience")
+  otherPrefferedLangSkill     String?  @map("other_preffered_lang_skill")
+  whyDrivingWithUs            String[] @map("why_driving_with_us")
+  onboardProcessSteps         String[] @map("onboard_process_steps")
+  drivingStartEstdTime        String?  @map("driving_start_estd_time")
+
+  usersSavedThisJob  User[]
+  userAppliedThisJob AppliedJob[]
+  flags              FlagJobPost[]
   // Relations
   User          User?         @relation("UserToJobPosting", fields: [userId], references: [userId], onDelete: Cascade)
   company       Company       @relation(fields: [companyId], references: [companyId])
@@ -638,6 +952,39 @@ enum PayStructureType {
   PER_LOAD
   SALARY
   COMBINATION_OTHER
+  PER_ROUTE
+  PER_TRIP
+  RATE_RANGE
+  PAID_LOADED_MILES
+  PER_DELIVERY
+  PER_BLOCK
+  BASE_TIPS
+  BASE_COMMISSION
+  VOLUNTEER_STIPEND
+  PER_RIDE
+  PERCENTAGE_SPLIT
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model Connection {
+  id          Int              @id @default(autoincrement()) @map("connection_id")
+  requesterId Int              @map("requester_id")
+  addresseeId Int              @map("addressee_id")
+  status      ConnectionStatus @default(PENDING)
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  deletedAt   DateTime?        @map("deleted_at")
+
+  requester User @relation("ConnectionRequester", fields: [requesterId], references: [userId], onDelete: Cascade)
+  addressee User @relation("ConnectionAddressee", fields: [addresseeId], references: [userId], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@map("connections")
 }
 
 // Main denormalized pay structure model
@@ -647,10 +994,10 @@ model PayStructure {
   type                     PayStructureType?
   jobPostingId             Int              @unique @map("job_posting_id")
   // Fields for Per Mile
-  startingCpm              Decimal?         @map("starting_cpm") @db.Decimal(18, 4)
-  cpmRangeMin              Decimal?         @map("cpm_range_min") @db.Decimal(18, 4)
-  cpmRangeMax              Decimal?         @map("cpm_range_max") @db.Decimal(18, 4)
-  mileageCalculationMethod Int?             @map("mileage_calculation_method")
+  startingCpm              Decimal?          @map("starting_cpm") @db.Decimal(18, 4)
+  cpmRangeMin              Decimal?          @map("cpm_range_min") @db.Decimal(18, 4)
+  cpmRangeMax              Decimal?          @map("cpm_range_max") @db.Decimal(18, 4)
+  mileageCalculationMethod Int?              @map("mileage_calculation_method")
 
   // Fields for Hourly
   startingHourlyRate Decimal? @map("starting_hourly_rate") @db.Decimal(18, 4)
@@ -693,7 +1040,7 @@ model PayStructure {
   paySchedule                   Int?     @map("pay_schedule")
 
   // Sign-on bonus
-  signOnBonusOffered         Boolean  @default(false) @map("sign_on_bonus_offered")
+  signOnBonusOffered         Boolean? @default(false) @map("sign_on_bonus_offered")
   signOnBonusAmount          Decimal? @map("sign_on_bonus_amount") @db.Decimal(18, 4)
   signOnBonusPayoutStructure String?  @map("sign_on_bonus_payout_structure") // e.g., "$1000 after 30 days..."
 
@@ -719,6 +1066,9 @@ model PayStructure {
   perDiem                 Boolean? @map("per_diem")
   holidayPay              Boolean? @map("holiday_pay")
   otherBonusDescription   String?  @map("other_bonus_description")
+  earningEstimate         String?  @map("earning_estimate")
+  benefitsPackage         Boolean? @default(false) @map("benefits_package")
+  paidOrientation         Boolean? @default(false) @map("paid_orientation")
 
   // Benefits fields
   benefits String[] @map("benefits")
@@ -735,11 +1085,154 @@ model PayStructure {
   orientationPayRate      Decimal? @map("orientation_pay_rate") @db.Decimal(10, 4)
   orientationPayUnit      Int?     @map("orientation_pay_unit")
 
+  payPerRoute             Decimal? @map("pay_per_route")
+  specifyRouteDefinition  String?  @map("specify_route_definition")
+  hasPayForNonDrivingTime Boolean? @default(false) @map("has_pay_for_non_driving_time")
+  payForNonDrivingTime    String[] @map("pay_for_non_driving_time")
+  hasBonusesOffered       Boolean? @default(false) @map("has_bonuses_offered")
+  bonusesOffered          String[] @map("bonuses_offered")
+  isTrainingProgram       Boolean? @map("is_training_program")
+  trainingPrograms        String[] @map("training_programs")
+
+  hasReimbursements Boolean? @default(false) @map("has_reimbursements")
+  reimbursements    String[] @map("reimbursements")
+
+  // Pay per trip fields
+  payPerTrip                     Int?    @map("pay_per_trip")
+  payPerTripMin                  Int?    @map("pay_per_trip_min")
+  payPerTripMax                  Int?    @map("pay_per_trip_max")
+  payPerTripAdditionalPayFactors String? @map("pay_per_trip_additional_pay_factors")
+
+  benefitsEligibility Int? @map("benefits_eligibility")
+  probationPeriod     Int? @map("probation_period")
+
+  // only if rate range
+  rateRangeDetails String?  @map("rate_range_details")
+  startingRPM      Decimal? @map("starting_rpm") @db.Decimal(18, 4)
+  startingRPMFrom  Decimal? @map("starting_rpm_from") @db.Decimal(18, 4)
+  startingRPMTo    Decimal? @map("starting_rpm_to") @db.Decimal(18, 4)
+  // only if Per Delivery
+  payPerDelivery   Decimal? @map("pay_per_delivery") @db.Decimal(18, 4)
+
+  // Only if PAID_LOADED_MILES
+  hasPaidLoadedMiles Boolean? @default(false) @map("has_paid_loaded_miles")
+
+  // only if Per Block/Shift
+  payPerBlock           Decimal? @map("pay_per_block") @db.Decimal(18, 4)
+  typicalBlockLength    String?  @map("typical_block_length")
+  // only if BASE + TIPS
+  basePayRate           Decimal? @map("base_pay_rate") @db.Decimal(18, 4)
+  basePayRateUnit       String?  @map("base_pay_rate_unit")
+  hasKeepTipsEarned     Boolean? @default(false) @map("has_keep_tips_earned")
+  estimatedAvgTips      Decimal? @map("estimated_avg_tips") @db.Decimal(18, 4)
+  // only if Base + Commission
+  commissionStructure   String?  @map("commission_structure")
+  fuelSurcharge         Int?     @map("fuel_surcharge")
+  accessorialPayOffered Int[]    @map("accessorial_pay_offered")
+
+  // Settlements & Deductions
+  settlementSchedule                     Int?     @map("settlement_schedule")
+  settlementPaymentMethod                Int?     @map("settlement_payment_method")
+  hasSettlementQuickPayOption            Boolean? @default(false) @map("has_settlement_quick_pay_option")
+  settlementQuickPayTerms                String?  @map("settlement_quick_pay_terms")
+  settlementTypicalRequired              Int[]    @map("settlement_typical_required")
+  otherSettlementTypicalRequired         String?  @map("other_settlement_typical_required")
+  contractorExpenseResponsibilities      Int[]    @map("contractor_expense_responsibilities")
+  otherContractorExpenseResponsibilities String?  @map("other_contractor_expense_responsibilities")
+  securityDepositDetails                 String?  @map("security_deposit_details")
+
+  // New fields added for heavy equipment operator
+  perDiemRate                               Decimal? @map("per_diem_rate") @db.Decimal(18, 4)
+  otherCompensations                        String?  @map("other_compensations")
+  projectCompletionBonus                    Boolean  @default(false) @map("project_completion_bonus")
+  performanceProductionBonus                Boolean  @default(false) @map("performance_production_bonus")
+  // New fields for transit bus driver
+  payProgressionInfo                        String?  @map("pay_progression_info")
+  shiftDifferentialOffers                   String[] @map("shift_differential_offers")
+  longevityPayAndServiceAwards              Boolean  @default(false) @map("longevity_pay_and_service_awards")
+  cdlTrainingLicenseRenewalReimbursement    Boolean  @default(false) @map("cdl_training_license_renewal_reimbursement")
+  payForReportingEarlyPreTripTime           Boolean  @default(false) @map("pay_for_reporting_early_pre_trip_time")
+  isPaidTraining                            Boolean  @default(false) @map("is_paid_training")
+  trainingDurationUnit                      Int?     @map("training_duration_unit")
+  trainingPayRate                           Decimal? @map("training_pay_rate") @db.Decimal(18, 4)
+  trainingPayUnit                           Int?     @map("training_pay_unit")
+  // New fields for Dispatcher
+  profitBonus                               Boolean  @default(false) @map("profit_bonus")
+  // New fields for NEMT Driver
+  blockImpliedHourlyRate                    Decimal? @map("block_implied_hourly_rate") @db.Decimal(18, 4)
+  volunteerStipendRate                      Decimal? @map("volunteer_stipend_rate") @db.Decimal(18, 4)
+  volunteerStipendUnit                      Int?     @map("volunteer_stipend_unit")
+  longevityPayTenureBonus                   Boolean  @default(false) @map("longevity_pay_tenure_bonus")
+  callbackOvertimePayRateBonus              Boolean  @default(false) @map("callback_overtime_pay_rate_bonus")
+  // New fields for ride Share Driver
+  driverPercentage                          Decimal? @map("driver_percentage") @db.Decimal(5, 2)
+  perRideRate                               Decimal? @map("per_ride_rate") @db.Decimal(18, 4)
+  tips                                      Int?     @map("tips")
+  tipsPoolingDetails                        String?  @map("tips_pooling_details")
+  newDriverSignUpBonusOffered               Boolean  @default(false) @map("new_driver_sign_up_bonus_offered")
+  newDriverSignUpBonusDetails               String?  @map("new_driver_sign_up_bonus_details")
+  surgePrimeTimePeakPricingMultipliersBonus Boolean  @default(false) @map("surge_prime_time_peak_pricing_multipliers_bonus")
+  questConsecutiveTripBonus                 Boolean  @default(false) @map("quest_consecutive_trip_bonus")
+  newDriverSignUpBonus                      Boolean  @default(false) @map("new_driver_sign_up_bonus")
+  highRatingBonus                           Boolean  @default(false) @map("high_rating_bonus")
+  acceptanceCompletionRateBonus             Boolean  @default(false) @map("acceptance_completion_rate_bonus")
+  weeklyMonthlyPerformanceBonus             Boolean  @default(false) @map("weekly_monthly_performance_bonus")
+  tollReimbursementsBonus                   Boolean  @default(false) @map("toll_reimbursements_bonus")
+  fuelSurchargeAssistanceBonus              Boolean  @default(false) @map("fuel_surcharge_assistance_bonus")
+
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
   jobPosting JobPosting @relation(fields: [jobPostingId], references: [jobPostingId])
+}
+
+model PreHirePackage {
+  preHirePackageId Int                  @id @default(autoincrement()) @map("pre_hire_package_id")
+  userId           Int                  @map("user_id")
+  companyId        Int                  @map("company_id")
+  status           PreHirePackageStatus @map("status")
+  otpVerifiedAt    DateTime?            @map("otp_verified_at")
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @default(now()) @updatedAt @map("updated_at")
+  deletedAt        DateTime?            @map("deleted_at")
+  isActive         Boolean              @default(true) @map("isactive")
+  user             User                 @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  company          Company              @relation(fields: [companyId], references: [companyId])
+}
+
+model FlagDriver {
+  flagDriverId Int        @id @default(autoincrement()) @map("flag_driver_id")
+  driverId     Int        @map("driver_id")
+  userId       Int        @map("user_id")
+  status       FlagStatus @default(PENDING) @map("status")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at")
+  deletedAt    DateTime?  @map("deleted_at")
+  driver       Driver     @relation(fields: [driverId], references: [driverId])
+  user         User       @relation(fields: [userId], references: [userId])
+
+  @@unique([driverId, userId])
+}
+
+model FlagJobPost {
+  flagJobId    Int        @id @default(autoincrement()) @map("flag_job_id")
+  jobPostingId Int        @map("job_posting_id")
+  userId       Int        @map("user_id")
+  status       FlagStatus @default(PENDING) @map("status")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at")
+  deletedAt    DateTime?  @map("deleted_at")
+  jobPosting   JobPosting @relation(fields: [jobPostingId], references: [jobPostingId])
+  user         User       @relation(fields: [userId], references: [userId])
+
+  @@unique([jobPostingId, userId])
+}
+
+enum FlagStatus {
+  PENDING
+  ACCEPTED
+  IGNORE
 }
 
 enum CertificateType {

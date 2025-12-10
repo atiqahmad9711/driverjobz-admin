@@ -2,7 +2,6 @@
 
 import { LoaderCircle } from "lucide-react";
 
-
 import {
   Accordion,
   AccordionContent,
@@ -20,7 +19,7 @@ import { useState } from "react";
 import { trpc } from "@/util/trpc";
 import FormValuesData from "./_components/form-values-data";
 import { useParams, useSearchParams } from "next/navigation";
-
+import { CopyToClipboard } from "@/components/ui/copy-to-clipboard";
 
 interface KeyValueProps {
   label: string;
@@ -34,7 +33,6 @@ const KeyValue = ({ label, value, className = "" }: KeyValueProps) => (
   </p>
 );
 
-
 export default function Page() {
   const [typeFilter, setTypeFilter] = useState<string>("");
   // const params = useSearchParams();
@@ -42,7 +40,7 @@ export default function Page() {
 
   const formFields = trpc.example.getFormFields.useQuery({
     categorySlug: params.categorySlug as string,
-    type: typeFilter as "job" | "driver" || undefined,
+    type: (typeFilter as "job" | "driver") || undefined,
   });
 
   return (
@@ -78,7 +76,17 @@ export default function Page() {
 
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm text-muted-foreground">
-                    <KeyValue label="Slug" value={formField.formFieldSlug} />
+                    <KeyValue
+                      label="Slug"
+                      value={
+                        <>
+                          {formField.formFieldSlug}{" "}
+                          <CopyToClipboard
+                            text={formField.formFieldSlug ?? ""}
+                          />
+                        </>
+                      }
+                    />
                     <KeyValue label="ES Label" value={formField.labelEs} />
                     <KeyValue label="Type" value={formField.componentType} />
                     <KeyValue label="Form Step" value={formField.formStepId} />
