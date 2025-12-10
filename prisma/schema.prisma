@@ -106,10 +106,11 @@ model FormValue {
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
   deletedAt      DateTime? @map("deleted_at")
-  groupEn        String?   @map("group_en")
-  groupEs        String?   @map("group_es")
-  inCategorySlug String[]  @map("in_category") // TODO
-  type           String    @default("driver") @map("type")
+  groupEn           String?   @map("group_en")
+  groupEs           String?   @map("group_es")
+  inCategorySlug    String[]  @map("in_category")
+  notInCategorySlug String[]  @map("not_in_category")
+  type              String    @map("type") @default("driver")
   rank           Int?      @default(100)
 
   // Relations
@@ -126,8 +127,8 @@ model User {
   password              String
   email                 String?   @unique
   homeAddress           String?   @map("home_address")
-  city                  String?
-  state                 String?
+  city                  Int?
+  state                 Int?
   street                String?
   apartmentNumber       String?   @map("apartment_number")
   countryCode           String    @default("+1") @map("country_code")
@@ -150,6 +151,7 @@ model User {
   currentStage          Int?      @map("current_stage")
   agreeForMarketingMail Boolean?  @default(false) @map("agree_for_marketing_mail")
   fcmTokens             String[]  @map("fcm_tokens")
+  status                ProfileStatus? @default(PENDING) @map("status")
 
   // Relations
   roles               Role[]
@@ -168,23 +170,9 @@ model User {
   blockedByUsers      Block[]          @relation("BlockedByUsers")
 }
 
-model AppliedJob {
-  appliedJobId Int     @id @default(autoincrement()) @map("applied_job_id")
-  userId       Int     @map("user_id")
-  jobPostingId Int     @map("job_posting_id")
-  coverLetter  String? @map("cover_letter")
-
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
-
-  // Relations
-  user       User       @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  jobPosting JobPosting @relation(fields: [jobPostingId], references: [jobPostingId], onDelete: Cascade)
-
-  // make job posting id and user id unique
-  @@unique([userId, jobPostingId])
-  @@map("applied_jobs")
+  jobPostings JobPosting[] @relation("UserToJobPosting")
+  flaggedJobPost FlagJobPost[]
+  flaggedDriver FlagDriver[]
 }
 
 model Role {
@@ -242,9 +230,9 @@ model Company {
   headquartersAddress         String?          @map("headquarters_address")
   apartmentNumber             String?          @map("apartment_number")
   street                      String?
-  city                        String?
-  state                       String?
-  zipCode                     String?          @map("zip_code")
+  city                        Int?
+  state                       Int?
+  zipCode                     String?      @map("zip_code")
   website                     String?
   terminalLocations           String[]         @map("terminal_locations")
   email                       String?
@@ -265,6 +253,7 @@ model Multimedia {
   filePath     String    @map("file_path")
   filename     String    @map("filename")
   side         String?
+  status       DocumentStatus? @default(PENDING) @map("status")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at")
   deletedAt    DateTime? @map("deleted_at")
@@ -396,20 +385,20 @@ model Driver {
   physicalAbility                   Int[] @map("physical_ability")
 
   // step 3
-  cprCertification                    Boolean?  @default(true) @map("cpr_certification")
-  cprCertificationType                Int?      @map("cpr_certification_type")
-  cprCertificationExpirationDate      DateTime? @map("cpr_certification_expiration_date")
-  firstAidCertification               Boolean?  @default(true) @map("first_aid_certification")
-  firstAidCertificationType           Int?      @map("first_aid_certification_type")
+  cprCertification Boolean? @map("cpr_certification") @default(true)
+  cprCertificationType Int? @map("cpr_certification_type")
+  cprCertificationExpirationDate DateTime? @map("cpr_certification_expiration_date")
+  firstAidCertification Boolean? @map("first_aid_certification") @default(true)
+  firstAidCertificationType Int? @map("first_aid_certification_type")
   firstAidCertificationExpirationDate DateTime? @map("first_aid_certification_expiration_date")
-  patsCertification                   String?   @map("pats_certification")
-  patsCertificationDate               DateTime? @map("pats_certification_date")
-  patsCertificateIssuingAgency        String?   @map("pats_certificate_issuing_agency")
-  behaviorTraining                    Boolean?  @default(false) @map("behavior_training")
-  behaviorTrainingName                String?   @map("behavior_training_name")
-  behaviorTrainingCompletedDate       DateTime? @map("behavior_training_completed_date")
-  childAbuseClearance                 Int?      @map("child_abuse_clearance")
-  childAbuseClearanceHeld             String?   @map("child_abuse_clearance_held")
+  patsCertification String? @map("pats_certification")
+  patsCertificationDate DateTime? @map("pats_certification_date")
+  patsCertificateIssuingAgency String? @map("pats_certificate_issuing_agency")
+  behaviorTraining Boolean? @map("behavior_training") @default(false)
+  behaviorTrainingName String? @map("behavior_training_name")
+  behaviorTrainingCompletedDate DateTime? @map("behavior_training_completed_date")
+  childAbuseClearance Int? @map("child_abuse_clearance")
+  childAbuseClearanceHeld String? @map("child_abuse_clearance_held")
 
   // step - 5
   preferredSchedule Int[] @map("preferred_schedule")
@@ -527,8 +516,7 @@ model Driver {
   flags                     FlagDriver[]
   category                  TransportationCategory?    @relation(fields: [driverCategory], references: [transportationCategoryId])
   state                     State?                     @relation(fields: [dotExaminerState], references: [stateId])
-  savedBy                   User[]                     @relation("UserToDriver")
-  hiredBy                   HiredDriver[]
+  flags                     FlagDriver[]
 
   @@unique([userId])
 }
@@ -640,6 +628,7 @@ enum JobPostStatus {
   PUBLISHED
   INACTIVE
   EXPIRED
+  REJECTED
 }
 
 enum CurrentStepStatus {
@@ -658,27 +647,27 @@ model JobPosting {
   employmentTypes       Int[]             @map("employment_types")
   numberOfOpenings      Int?              @default(1) @map("number_of_openings")
   stateId               Int?              @map("state_id")
-  locationCity          String?           @map("location_city")
+  locationCity          Int?              @map("location_city")
   locationZipCode       Int?              @map("location_zip_code")
-  routeType             String[]          @map("route_type")
-  serviceArea           String[]          @map("service_area")
-  specificServiceArea   String?           @map("specific_service_area")
-  workScheduleShifts    String?           @map("work_schedule_shifts")
-  workScheduleTimings   String[]          @map("work_schedule_timing")
-  workScheduleDays      Int[]             @map("work_schedule_days")
-  joinPeriod            Int?              @map("join_period")
-  targetStartDate       String?           @map("target_start_date")
-  status                JobPostStatus     @map("status")
-  vehicleType           String[]          @map("vehicle_type")
-  vehicleTypeText       String?           @map("vehicle_type_text")
-  truckAge              String?           @map("truck_age")
-  transmission          String?           @map("transmission")
-  truckAssignment       String?           @map("truck_assignment")
-  governedSpeed         String?           @map("governed_speed")
-  truckAmenities        String[]          @map("truck_amenities")
-  inCabTechnology       String[]          @map("in_cab_technology")
-  eldSystems            String[]          @map("eld_systems")
-  loadingReqs           String[]          @map("loading_reqs")
+  routeType           String[]      @map("route_type")
+  serviceArea         String[]      @map("service_area")
+  specificServiceArea String?       @map("specific_service_area")
+  workScheduleShifts  String?       @map("work_schedule_shifts")
+  workScheduleTimings String[]      @map("work_schedule_timing")
+  workScheduleDays    Int[]         @map("work_schedule_days")
+  joinPeriod          Int?          @map("join_period")
+  targetStartDate     DateTime?     @map("target_start_date")
+  status              JobPostStatus @map("status")
+  vehicleType         String[]      @map("vehicle_type")
+  vehicleTypeText     String?       @map("vehicle_type_text")
+  truckAge            String?       @map("truck_age")
+  transmission        String?       @map("transmission")
+  truckAssignment     String?       @map("truck_assignment")
+  governedSpeed       String?       @map("governed_speed")
+  truckAmenities      String[]      @map("truck_amenities")
+  inCabTechnology     String[]      @map("in_cab_technology")
+  eldSystems          String[]      @map("eld_systems")
+  loadingReqs         String[]      @map("loading_reqs")
 
   trailerTypes   String[] @map("trailer_types")
   trailerLength  String?  @map("trailer_length")
@@ -698,7 +687,7 @@ model JobPosting {
   twicCardRequired     Boolean? @map("twic_card_required")
   passportRequired     Boolean? @map("passport_required")
 
-  experienceMonths   Decimal? @map("experience_months")
+  experienceMonths   Decimal? @map("experience_months") @db.Decimal(18, 4)
   preferredEquipment String[] @map("preferred_equipment")
   preferredRoutes    String[] @map("preferred_routes")
   willingToTrain     Boolean? @map("willing_to_train")
@@ -722,7 +711,7 @@ model JobPosting {
   numberOfSeriousViolationsYears Int? @map("number_of_serious_violations_years")
   yearsOfSeriousViolationsYears  Int? @map("years_of_serious_violations_years")
 
-  otherDrivingRecord String? @map("other_driving_record")
+  otherDrivingRecord          String? @map("other_driving_record")
 
   screeningChecks      String[] @map("screening_checks")
   physicalRequirements String[] @map("physical_requirements")
@@ -938,11 +927,11 @@ model JobPosting {
   userAppliedThisJob AppliedJob[]
   flags              FlagJobPost[]
   // Relations
-  User               User          @relation("UserToJobPosting", fields: [userId], references: [userId], onDelete: Cascade)
-  company            Company       @relation(fields: [companyId], references: [companyId])
-  locationState      State?        @relation(fields: [stateId], references: [stateId])
-  payStructure       PayStructure?
-  hiredDrivers       HiredDriver[]
+  User          User?         @relation("UserToJobPosting", fields: [userId], references: [userId], onDelete: Cascade)
+  company       Company       @relation(fields: [companyId], references: [companyId])
+  locationState State?        @relation(fields: [stateId], references: [stateId])
+  payStructure  PayStructure?
+  flags         FlagJobPost[]
 }
 
 model FeatureEntity {
@@ -1000,9 +989,10 @@ model Connection {
 
 // Main denormalized pay structure model
 model PayStructure {
-  payStructureId           Int               @id @default(autoincrement()) @map("pay_structure_id")
+  // TODO: correct decimal
+  payStructureId           Int              @id @default(autoincrement()) @map("pay_structure_id")
   type                     PayStructureType?
-  jobPostingId             Int               @unique @map("job_posting_id")
+  jobPostingId             Int              @unique @map("job_posting_id")
   // Fields for Per Mile
   startingCpm              Decimal?          @map("starting_cpm") @db.Decimal(18, 4)
   cpmRangeMin              Decimal?          @map("cpm_range_min") @db.Decimal(18, 4)
@@ -1041,10 +1031,13 @@ model PayStructure {
   combinationDescription String? @map("combination_description") // Describe structure, e.g., "CPM + Hourly for detention..."
 
   // Common fields
-  minimumGuaranteedPay       Decimal? @map("minimum_guaranteed_pay") @db.Decimal(18, 4)
-  minimumGuaranteedPayPeriod Int?     @map("minimum_guaranteed_pay_period")
-  averageEarningsEstimate    String?  @map("average_earnings_estimate") // e.g., "$1,500 - $1,800 per week"
-  paySchedule                Int?     @map("pay_schedule")
+  minimumGuaranteedPay          Decimal? @map("minimum_guaranteed_pay") @db.Decimal(18, 4)
+  minimumGuaranteedPayPeriod    Int?     @map("minimum_guaranteed_pay_period")
+  minimumGuaranteedPayCondition String?  @map("minimum_guaranteed_pay_condition")
+  mileageReimbursement          Decimal? @map("mileage_reimbursement") @db.Decimal(18, 4)
+  mileageReimbursementUnit      Int?     @map("mileage_reimbursement_unit")
+  averageEarningsEstimate       String?  @map("average_earnings_estimate") // e.g., "$1,500 - $1,800 per week"
+  paySchedule                   Int?     @map("pay_schedule")
 
   // Sign-on bonus
   signOnBonusOffered         Boolean? @default(false) @map("sign_on_bonus_offered")
@@ -1247,46 +1240,51 @@ enum CertificateType {
   OTHER
 }
 
-enum TimePeriod {
-  AM
-  PM
+enum ProfileStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  BLOCKED
 }
 
-enum PreHirePackageStatus {
+enum DocumentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum FlagStatus {
   PENDING
   ACCEPTED
   IGNORE
 }
 
-model Block {
-  id            Int       @id @default(autoincrement()) @map("block_id")
-  blockerId     Int       @map("blocker_id")
-  blockedUserId Int       @map("blocked_user_id")
-  blockedAt     DateTime  @default(now()) @map("blocked_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
-  deletedAt     DateTime? @map("deleted_at")
+model FlagDriver {
+  flagDriverId Int        @id @default(autoincrement()) @map("flag_driver_id")
+  driverId     Int        @map("driver_id")
+  userId       Int        @map("user_id")
+  flagMessage  String?    @map("flag_Message")
+  status       FlagStatus @default(PENDING) @map("status")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at")
+  deletedAt    DateTime?  @map("deleted_at")
+  driver       Driver     @relation(fields: [driverId], references: [driverId])
+  user         User       @relation(fields: [userId], references: [userId])
 
-  // Relations
-  blocker     User @relation("BlockedUsers", fields: [blockerId], references: [userId], onDelete: Cascade)
-  blockedUser User @relation("BlockedByUsers", fields: [blockedUserId], references: [userId], onDelete: Cascade)
-
-  @@unique([blockerId, blockedUserId])
-  @@map("blocks")
+  @@unique([driverId, userId])
 }
 
-model HiredDriver {
-  hiredDriverId Int        @id @default(autoincrement()) @map("hired_driver_id")
-  driverId      Int        @map("driver_id")
-  companyId     Int        @map("company_id")
-  jobPostingId  Int        @map("job_posting_id")
-  hireEndedAt   DateTime?  @map("hire_ended_at")
-  createdAt     DateTime   @default(now()) @map("created_at")
-  updatedAt     DateTime   @default(now()) @updatedAt @map("updated_at")
-  deletedAt     DateTime?  @map("deleted_at")
-  driver        Driver     @relation(fields: [driverId], references: [driverId])
-  company       Company    @relation(fields: [companyId], references: [companyId])
-  jobPosting    JobPosting @relation(fields: [jobPostingId], references: [jobPostingId])
+model FlagJobPost {
+  flagJobId    Int        @id @default(autoincrement()) @map("flag_job_id")
+  jobPostingId Int        @map("job_posting_id")
+  userId       Int        @map("user_id")
+  flagMessage  String?    @map("flag_Message")
+  status       FlagStatus @default(PENDING) @map("status")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at")
+  deletedAt    DateTime?  @map("deleted_at")
+  jobPosting   JobPosting @relation(fields: [jobPostingId], references: [jobPostingId])
+  user         User       @relation(fields: [userId], references: [userId])
 
-  @@unique([driverId, companyId, jobPostingId])
-  @@map("hired_drivers")
+  @@unique([jobPostingId, userId])
 }
