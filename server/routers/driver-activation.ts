@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { router, protectedProcedureWithAuthHeader } from "../trpc";
 import prisma from "@/util/prismaClient";
+import { ProfileStatus, DocumentStatus } from "@prisma/client";
 
 export const driverActivationRouter = router({
   // Listing of driver profiles awaiting activation
@@ -15,9 +16,14 @@ export const driverActivationRouter = router({
       const { page = 1, pageSize = 10 } = input || {};
       const skip = (page - 1) * pageSize;
 
-      const where = {
+      const where: {
+        isCompany: boolean;
+        status: ProfileStatus;
+        deletedAt: null;
+        driver: { isNot: null };
+      } = {
         isCompany: false,
-        status: "PENDING",
+        status: ProfileStatus.PENDING,
         deletedAt: null,
         driver: {
           isNot: null,
@@ -117,14 +123,19 @@ export const driverActivationRouter = router({
       // 2. entityId matches a driver_id (not user_id)
       // 3. status is PENDING
       // 4. not deleted
-      const where = {
+      const where: {
+        entityId: { in: number[] };
+        entityType: { in: string[] };
+        status: DocumentStatus;
+        deletedAt: null;
+      } = {
         entityId: {
           in: driverIds,
         },
         entityType: {
           in: ["driver", "DRIVER"],
         },
-        status: "PENDING",
+        status: DocumentStatus.PENDING,
         deletedAt: null,
       };
 
