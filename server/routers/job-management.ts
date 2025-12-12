@@ -168,6 +168,11 @@ export const jobManagementRouter = router({
             },
           },
         });
+      } else {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Invalid action: ${action}`,
+        });
       }
 
       // Transform response to include userId at the top level

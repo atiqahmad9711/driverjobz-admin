@@ -2,6 +2,7 @@ import { z } from "zod";
 import { router, protectedProcedureWithAuthHeader } from "../trpc";
 import prisma from "@/util/prismaClient";
 import { TRPCError } from "@trpc/server";
+import { ProfileStatus, DocumentStatus } from "@prisma/client";
 
 // Schema for document review
 const documentReviewSchema = z.object({
@@ -33,9 +34,14 @@ export const employerManagementRouter = router({
       const { page = 1, pageSize = 10 } = input || {};
       const skip = (page - 1) * pageSize;
 
-      const where = {
+      const where: {
+        isCompany: boolean;
+        status: ProfileStatus;
+        deletedAt: null;
+        company: { some: {} };
+      } = {
         isCompany: true,
-        status: "PENDING",
+        status: ProfileStatus.PENDING,
         deletedAt: null,
         company: {
           some: {},
@@ -143,7 +149,7 @@ export const employerManagementRouter = router({
         entityType: {
           in: ["company", "COMPANY"],
         },
-        status: "PENDING",
+        status: DocumentStatus.PENDING,
         deletedAt: null,
       };
 
@@ -193,7 +199,7 @@ export const employerManagementRouter = router({
       };
 
       if (status) {
-        where.status = status;
+        where.status = status as any;
       }
 
       if (search) {
@@ -280,28 +286,47 @@ export const employerManagementRouter = router({
         });
       }
 
-      // Verify the user (entityId is the user_id)
-      const user = await prisma.user.findUnique({
-        where: { userId: documentExists.entityId },
-      });
+      // Check if document is for an employer/company
+      // Company documents: entityType should be "company" (or "COMPANY") AND entityId matches company_id
+      const entityTypeUpper = documentExists.entityType.toUpperCase();
+      const isCompanyEntityType = entityTypeUpper === "COMPANY";
 
-      if (!user) {
+      if (!isCompanyEntityType) {
         throw new TRPCError({
-          code: "NOT_FOUND",
-          message: `User with ID ${documentExists.entityId} (entityId) does not exist`,
+          code: "BAD_REQUEST",
+          message: `Document with ID ${multimediaId} is not a company document. Entity type: ${documentExists.entityType}`,
         });
       }
 
-      // Check if document is for an employer/company
-      // Company documents: entityType should be "company" (or "COMPANY") AND isCompany = true
-      const entityTypeUpper = documentExists.entityType.toUpperCase();
-      const isCompanyEntityType = entityTypeUpper === "COMPANY";
-      const isCompanyUser = user.isCompany === true;
+      // Verify the company exists (entityId is the company_id for company documents)
+      const company = await prisma.company.findUnique({
+        where: { companyId: documentExists.entityId },
+        select: {
+          companyId: true,
+          userId: true,
+        },
+      });
 
-      if (!isCompanyEntityType || !isCompanyUser) {
+      if (!company) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: `Company with ID ${documentExists.entityId} (entityId) does not exist`,
+        });
+      }
+
+      // Verify the company's user is an employer
+      const user = await prisma.user.findUnique({
+        where: { userId: company.userId },
+        select: {
+          userId: true,
+          isCompany: true,
+        },
+      });
+
+      if (!user || user.isCompany !== true) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: `Document with ID ${multimediaId} is not a company document. Entity type: ${documentExists.entityType}, User isCompany: ${user.isCompany}`,
+          message: `Document with ID ${multimediaId} is not associated with a valid employer. User isCompany: ${user?.isCompany || "null"}`,
         });
       }
 

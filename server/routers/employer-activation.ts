@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { router, protectedProcedureWithAuthHeader } from "../trpc";
 import prisma from "@/util/prismaClient";
+import { ProfileStatus, DocumentStatus } from "@prisma/client";
 
 export const employerActivationRouter = router({
   // Listing of employer profiles awaiting activation
@@ -15,9 +16,14 @@ export const employerActivationRouter = router({
       const { page = 1, pageSize = 10 } = input || {};
       const skip = (page - 1) * pageSize;
 
-      const where = {
+      const where: {
+        isCompany: boolean;
+        status: ProfileStatus;
+        deletedAt: null;
+        company: { some: {} };
+      } = {
         isCompany: true,
-        status: "PENDING",
+        status: ProfileStatus.PENDING,
         deletedAt: null,
         company: {
           some: {},
@@ -98,14 +104,19 @@ export const employerActivationRouter = router({
       // 2. entityId matches a company_id (not user_id)
       // 3. status is PENDING
       // 4. not deleted
-      const where = {
+      const where: {
+        entityId: { in: number[] };
+        entityType: { in: string[] };
+        status: DocumentStatus;
+        deletedAt: null;
+      } = {
         entityId: {
           in: companyIds,
         },
         entityType: {
           in: ["company", "COMPANY"],
         },
-        status: "PENDING",
+        status: DocumentStatus.PENDING,
         deletedAt: null,
       };
 
