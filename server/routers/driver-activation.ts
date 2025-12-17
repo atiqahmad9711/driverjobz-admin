@@ -151,49 +151,8 @@ export const driverActivationRouter = router({
         prisma.multimedia.count({ where }),
       ]);
 
-      // Get driver information for each document
-      const entityIds = documents.map((doc) => doc.entityId);
-      const driversWithUsers = await prisma.driver.findMany({
-        where: {
-          driverId: {
-            in: entityIds,
-          },
-        },
-        select: {
-          driverId: true,
-          user: {
-            select: {
-              firstName: true,
-              lastName: true,
-              name: true,
-              email: true,
-            },
-          },
-        },
-      });
-
-      // Create a map of driverId -> driver info
-      const driverMap = new Map<number, { name: string | null; email: string | null }>(
-        driversWithUsers.map((driver) => [
-          driver.driverId,
-          {
-            name: driver.user.firstName && driver.user.lastName
-              ? `${driver.user.firstName} ${driver.user.lastName}`
-              : driver.user.name || null,
-            email: driver.user.email || null,
-          },
-        ])
-      );
-
-      // Enrich documents with driver name and email
-      const enrichedDocuments = documents.map((doc) => ({
-        ...doc,
-        driverName: driverMap.get(doc.entityId)?.name || null,
-        driverEmail: driverMap.get(doc.entityId)?.email || null,
-      }));
-
       return {
-        documents: enrichedDocuments,
+        documents,
         pagination: {
           page,
           pageSize,
