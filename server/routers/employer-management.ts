@@ -165,8 +165,45 @@ export const employerManagementRouter = router({
         prisma.multimedia.count({ where }),
       ]);
 
+      // Get company information for each document
+      const entityIds = documents.map((doc) => doc.entityId);
+      const companiesWithUsers = await prisma.company.findMany({
+        where: {
+          companyId: {
+            in: entityIds,
+          },
+        },
+        select: {
+          companyId: true,
+          name: true,
+          user: {
+            select: {
+              email: true,
+            },
+          },
+        },
+      });
+
+      // Create a map of companyId -> company info
+      const companyMap = new Map<number, { name: string | null; email: string | null }>(
+        companiesWithUsers.map((company) => [
+          company.companyId,
+          {
+            name: company.name || null,
+            email: company.user.email || null,
+          },
+        ])
+      );
+
+      // Enrich documents with company name and email
+      const enrichedDocuments = documents.map((doc) => ({
+        ...doc,
+        companyName: companyMap.get(doc.entityId)?.name || null,
+        companyEmail: companyMap.get(doc.entityId)?.email || null,
+      }));
+
       return {
-        documents,
+        documents: enrichedDocuments,
         pagination: {
           page,
           pageSize,
@@ -190,7 +227,18 @@ export const employerManagementRouter = router({
       const { page = 1, pageSize = 10, search, status } = input || {};
       const skip = (page - 1) * pageSize;
 
-      const where: any = {
+      const where: {
+        isCompany: boolean;
+        deletedAt: null;
+        company: { some: {} };
+        status?: ProfileStatus;
+        OR?: Array<{
+          firstName?: { contains: string; mode: "insensitive" };
+          lastName?: { contains: string; mode: "insensitive" };
+          email?: { contains: string; mode: "insensitive" };
+          company?: { some: { name: { contains: string; mode: "insensitive" } } };
+        }>;
+      } = {
         isCompany: true,
         deletedAt: null,
         company: {
@@ -199,7 +247,7 @@ export const employerManagementRouter = router({
       };
 
       if (status) {
-        where.status = status as any;
+        where.status = status as ProfileStatus;
       }
 
       if (search) {
