@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const publicRoutes = ['/login', '/_next', '/api'];
+const publicRoutes = ['/login', '/_next', '/api/trpc/auth.'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow public routes, static files, and all API routes (CORS handled by route handler)
+  // Allow public routes and static files
   if (
     publicRoutes.some(route => pathname.startsWith(route)) ||
     pathname.startsWith('/_next/') ||
