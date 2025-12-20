@@ -89,7 +89,7 @@ export const authRouter = router({
     }),
   
   // Get current user session
-  me: publicProcedure
+  me: protectedProcedure
     .query(async ({ ctx }) => {
       if (!ctx.user) {
         return null;

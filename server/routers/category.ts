@@ -1,10 +1,10 @@
-// server/routers/example.ts
+// server/routers/category.ts
 import { z } from "zod";
-import { publicProcedure, router } from "../trpc";
+import { protectedProcedureWithAuthHeader, router } from "../trpc";
 import prisma from "@/util/prismaClient";
 
-export const appRouter = router({
-  getCategories: publicProcedure.input(z.object({})).query(async () => {
+export const categoryRouter = router({
+  getCategories: protectedProcedureWithAuthHeader.input(z.object({})).query(async () => {
     const categories = await prisma.transportationCategory.findMany({
       include: {
         translations: true,

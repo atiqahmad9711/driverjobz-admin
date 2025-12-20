@@ -22,10 +22,10 @@ export const formValuesRouter = router({
     }),
 
   // Get a single form value by ID
-  getById: publicProcedure
+  getById: protectedProcedure
     .input(z.object({ id: z.string() }))
-    .query(async ({ input, ctx }) => {
-      const formValue = await ctx.prisma.formValue.findUnique({
+    .query(async ({ input }) => {
+      const formValue = await prisma.formValue.findUnique({
         where: { formValueId: parseInt(input.id) },
       });
 
