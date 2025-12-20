@@ -16,66 +16,158 @@ export const driverActivationRouter = router({
       const { page = 1, pageSize = 10 } = input || {};
       const skip = (page - 1) * pageSize;
 
-      const where: {
-        isCompany: boolean;
-        status: ProfileStatus;
-        deletedAt: null;
-        driver: { isNot: null };
-      } = {
-        isCompany: false,
-        status: ProfileStatus.PENDING,
-        deletedAt: null,
-        driver: {
-          isNot: null,
+      // Query drivers with status PENDING (matching listing API structure)
+      const where = {
+        user: {
+          isCompany: false,
+          status: ProfileStatus.PENDING,
+          deletedAt: null,
         },
       };
 
-      const [profiles, total] = await Promise.all([
-        prisma.user.findMany({
+      const [drivers, total] = await Promise.all([
+        prisma.driver.findMany({
           where,
-          skip,
-          take: pageSize,
-          select: {
-            userId: true,
-            name: true,
-            firstName: true,
-            lastName: true,
-            contactNumber: true,
-            profilePicture: true,
-            city: true,
-            state: true,
-            street: true,
-            zipCode: true,
-            isCompany: true,
-            currentStep: true,
-            currentStage: true,
-            status: true,
-            driver: {
+          include: {
+            user: {
               select: {
-                driverId: true,
-                driverCategory: true,
                 userId: true,
-                employmentType: true,
-                workSplitShift: true,
-                physicalAbility: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                name: true,
+                state: true,
+                city: true,
+                status: true,
+                currentStage: true,
+                currentStep: true,
+                createdAt: true,
+                updatedAt: true,
+                appliedJobs: {
+                  select: {
+                    jobPostingId: true,
+                  },
+                },
+                connectionRequest: {
+                  select: {
+                    status: true,
+                    id: true,
+                    requesterId: true,
+                    addresseeId: true,
+                  },
+                },
+                connectionAddressee: {
+                  select: {
+                    status: true,
+                    id: true,
+                    requesterId: true,
+                    addresseeId: true,
+                  },
+                },
+                savedDrivers: {
+                  select: {
+                    driverId: true,
+                  },
+                },
+                preHirePackages: {
+                  select: {
+                    status: true,
+                    userId: true,
+                    companyUserId: true,
+                    preHirePackageId: true,
+                  },
+                },
+              },
+            },
+            driverSpecialLicense: true,
+            driverEmploymentHistory: {
+              orderBy: {
+                rank: 'asc',
+              },
+            },
+            driverOtherCertifications: {
+              orderBy: {
+                rank: 'asc',
+              },
+            },
+            category: {
+              include: {
+                translations: true,
+              },
+            },
+            savedBy: {
+              select: {
+                userId: true,
+              },
+            },
+            flags: {
+              select: {
+                userId: true,
+                flagMessage: true,
               },
             },
           },
           orderBy: {
             createdAt: "desc",
           },
+          skip,
+          take: pageSize,
         }),
-        prisma.user.count({ where }),
+        prisma.driver.count({ where }),
       ]);
 
+      // Map drivers to match listing API response structure
+      const mappedDrivers = drivers.map((driver) => {
+        const fullName = driver.user.firstName && driver.user.lastName
+          ? `${driver.user.firstName} ${driver.user.lastName}`
+          : driver.user.name || '';
+
+        return {
+          name: fullName,
+          employmentArrangement: null, // Would need form values mapper
+          state: driver.user.state,
+          city: driver.user.city,
+          cdlEndorsement: driver.driverLicenseEndorsements || undefined,
+          driverLicenseClass: driver.driverLicenseClass || undefined,
+          lastUpdatedAt: driver.updatedAt,
+          experience: driver.totalExperienceYears || 
+                     driver.totalVerifiableRelevantExperience || 
+                     driver.totalVerifiableCdlExperience || 
+                     driver.totalVerifiableBusDriverExperience || 
+                     undefined,
+          vehiclePreference: driver.vehiclePreference || undefined,
+          availability: driver.availability || undefined,
+          routeTypes: driver.routeTypes || undefined,
+          preferredRouteType: driver.preferredRouteType || undefined,
+          driverCategory: driver.driverCategory || undefined,
+          employmentTypeDesc: driver.employmentType || undefined,
+          currentStep: driver.user.currentStep,
+          currentStage: driver.user.currentStage,
+          emergencyVehicleTypes: driver.emergencyVehicleTypes || undefined,
+          primaryVehicle: driver.primaryVehicle || undefined,
+          category: driver.category?.translations?.[0]?.name || undefined,
+          postedDate: driver.createdAt,
+          flagged: driver.flags.length > 0,
+          saved: driver.savedBy.length > 0,
+          driverId: driver.driverId,
+          userId: driver.user.userId,
+          appliedJobId: driver.user.appliedJobs.map((job) => job.jobPostingId),
+          appliedJobCount: driver.user.appliedJobs.length,
+          flagMessage: driver.flags.length > 0 ? driver.flags[0].flagMessage : null,
+          connectionRequest: driver.user.connectionRequest.length > 0 ? driver.user.connectionRequest[0] : null,
+          connectionAddressee: driver.user.connectionAddressee.length > 0 ? driver.user.connectionAddressee[0] : null,
+          savedDrivers: driver.user.savedDrivers.length > 0 ? driver.user.savedDrivers[0] : null,
+          preHirePackages: driver.user.preHirePackages?.length ? driver.user.preHirePackages[0] : null,
+          status: driver.user.status,
+        };
+      });
+
       return {
-        profiles,
-        pagination: {
-          page,
-          pageSize,
-          total,
-          totalPages: Math.ceil(total / pageSize),
-        },
+        drivers: mappedDrivers,
+        total,
+        isLast: total <= pageSize * page,
+        page,
+        pageSize,
       };
     }),
 

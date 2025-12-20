@@ -391,7 +391,7 @@ model Driver {
   firstAidCertification Boolean? @map("first_aid_certification") @default(true)
   firstAidCertificationType Int? @map("first_aid_certification_type")
   firstAidCertificationExpirationDate DateTime? @map("first_aid_certification_expiration_date")
-  patsCertification String? @map("pats_certification")
+  patsCertification Boolean? @default(false) @map("pats_certification")
   patsCertificationDate DateTime? @map("pats_certification_date")
   patsCertificateIssuingAgency String? @map("pats_certificate_issuing_agency")
   behaviorTraining Boolean? @map("behavior_training") @default(false)
