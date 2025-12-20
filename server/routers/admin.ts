@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, protectedProcedureWithAuthHeader } from "../trpc";
+import { router, protectedProcedureWithAuthHeader, publicProcedure } from "../trpc";
 import prisma from "@/util/prismaClient";
 import { TRPCError } from "@trpc/server";
 import { hash } from "bcryptjs";
@@ -18,9 +18,9 @@ const changePasswordSchema = z.object({
 
 export const adminRouter = router({
   // API14: Send OTP for password change
-  sendPasswordChangeOtp: protectedProcedureWithAuthHeader
+  sendPasswordChangeOtp: publicProcedure
     .input(sendOtpSchema)
-    .mutation(async ({ input, ctx }) => {
+    .mutation(async ({ input }) => {
       const { email } = input;
 
       // Verify user exists and is admin
@@ -66,7 +66,7 @@ export const adminRouter = router({
     }),
 
   // API14: Verify OTP and change password
-  changePassword: protectedProcedureWithAuthHeader
+  changePassword: publicProcedure
     .input(changePasswordSchema)
     .mutation(async ({ input }) => {
       const { email, otp, newPassword } = input;

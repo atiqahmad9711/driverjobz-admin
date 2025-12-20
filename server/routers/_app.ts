@@ -1,7 +1,7 @@
 // server/routers/_app.ts
 import { router } from "../trpc";
 import { appRouter as exampleRouter } from "./example";
-import { appRouter as categoryRouter } from "./category";
+import { categoryRouter } from "./category";
 import { formValuesRouter } from "./form-values";
 import { authRouter } from "./auth";
 import { dashboardRouter } from "./dashboard";

@@ -1,17 +1,17 @@
 // server/routers/example.ts
 import { z } from "zod";
-import { publicProcedure, router } from "../trpc";
+import { protectedProcedureWithAuthHeader, router } from "../trpc";
 import prisma from "@/util/prismaClient";
 
 export const appRouter = router({
-  hello: publicProcedure
+  hello: protectedProcedureWithAuthHeader
     .input(z.object({ name: z.string().optional() }))
     .query(({ input }) => {
       return {
         message: `Hello, ${input.name ?? "World"}!`,
       };
     }),
-  getFormFields: publicProcedure
+  getFormFields: protectedProcedureWithAuthHeader
     .input(
       z.object({
         categorySlug: z.string(),

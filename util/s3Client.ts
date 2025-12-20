@@ -47,8 +47,9 @@ class S3ClientUtil {
       Bucket: this.privateBucketName,
       Key: filePath,
     });
-
+    console.log("isPrivate:",isPrivate);
     if (isPrivate) {
+      console.log('process.env.NODE_ENV:',process.env.NODE_ENV)
       const expiresIn = process.env.NODE_ENV === 'development' ? 60 * 60 * 24 : 60 * 60;
       try {
         const presignedUrl = await getSignedUrl(this.client, command, {

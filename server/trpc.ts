@@ -88,18 +88,53 @@ const t = initTRPC.context<Context>().create({
 export const router = t.router;
 export const publicProcedure = t.procedure;
 
-// Protected procedure (requires authentication)
+// Protected procedure (requires Authorization header, not cookies)
 export const protectedProcedure = t.procedure.use(
   t.middleware(async ({ ctx, next }) => {
-    if (!ctx.user) {
+    // ONLY accept token from Authorization header (not cookies)
+    const authToken = getTokenFromAuthHeader(ctx.req);
+    
+    if (!authToken) {
       throw new TRPCError({ 
         code: 'UNAUTHORIZED',
-        message: 'You must be logged in to access this resource',
+        message: 'You must be logged in to access this resource. Please provide a valid Authorization header.',
       });
     }
     
-    // Check for admin role if required
-    const isAdmin = ctx.user.roles.includes('admin');
+    let user: UserContext;
+    
+    try {
+      const secret = config.be.auth.secret || 'your-secret-key';
+      const decoded = verify(authToken, secret) as any;
+      
+      // Handle token structure - roles can be array of objects or array of strings
+      let roles: string[] = [];
+      if (decoded.roles) {
+        if (Array.isArray(decoded.roles)) {
+          if (decoded.roles.length > 0 && typeof decoded.roles[0] === 'object') {
+            // Parallel backend format: extract slugs
+            roles = decoded.roles.map((r: { slug?: string; role?: string }) => r.slug || r.role).filter(Boolean);
+          } else {
+            // Array of strings format (from admin login API)
+            roles = decoded.roles;
+          }
+        }
+      }
+      
+      user = {
+        userId: decoded.userId,
+        roles: roles,
+      };
+    } catch (error: any) {
+      console.error('Failed to verify token from Authorization header:', error);
+      throw new TRPCError({ 
+        code: 'UNAUTHORIZED',
+        message: `Invalid or expired token: ${error.message || 'Token verification failed'}`,
+      });
+    }
+    
+    // Check for admin role
+    const isAdmin = user.roles.includes('admin');
     if (!isAdmin) {
       throw new TRPCError({
         code: 'FORBIDDEN',
@@ -110,65 +145,54 @@ export const protectedProcedure = t.procedure.use(
     return next({
       ctx: {
         ...ctx,
-        user: ctx.user,
+        user: user,
       },
     });
   })
 );
 
-// Protected procedure with Authorization header support (for new APIs like dashboard)
+// Protected procedure with Authorization header support (REQUIRES Authorization header, not cookies)
 export const protectedProcedureWithAuthHeader = t.procedure.use(
   t.middleware(async ({ ctx, next }) => {
-    // Try to get token from Authorization header first
+    // ONLY accept token from Authorization header (not cookies)
     const authToken = getTokenFromAuthHeader(ctx.req);
     
-    let user: UserContext | undefined = ctx.user;
-    
-    // If no user from cookie auth, try Authorization header
-    if (!user) {
-      if (!authToken) {
-        throw new TRPCError({ 
-          code: 'UNAUTHORIZED',
-          message: 'You must be logged in to access this resource. Please provide a valid Authorization header.',
-        });
-      }
-      
-      try {
-        const secret = config.be.auth.secret || 'your-secret-key';
-        const decoded = verify(authToken, secret) as any;
-        
-        // Handle token structure - roles can be array of objects or array of strings
-        let roles: string[] = [];
-        if (decoded.roles) {
-          if (Array.isArray(decoded.roles)) {
-            if (decoded.roles.length > 0 && typeof decoded.roles[0] === 'object') {
-              // Parallel backend format: extract slugs
-              roles = decoded.roles.map((r: { slug?: string; role?: string }) => r.slug || r.role).filter(Boolean);
-            } else {
-              // Array of strings format (from admin login API)
-              roles = decoded.roles;
-            }
-          }
-        }
-        
-        user = {
-          userId: decoded.userId,
-          roles: roles,
-        };
-      } catch (error: any) {
-        console.error('Failed to verify token from Authorization header:', error);
-        // Throw error with more details for debugging
-        throw new TRPCError({ 
-          code: 'UNAUTHORIZED',
-          message: `Invalid or expired token: ${error.message || 'Token verification failed'}`,
-        });
-      }
-    }
-    
-    if (!user) {
+    if (!authToken) {
       throw new TRPCError({ 
         code: 'UNAUTHORIZED',
-        message: 'You must be logged in to access this resource.',
+        message: 'You must be logged in to access this resource. Please provide a valid Authorization header.',
+      });
+    }
+    
+    let user: UserContext;
+    
+    try {
+      const secret = config.be.auth.secret || 'your-secret-key';
+      const decoded = verify(authToken, secret) as any;
+      
+      // Handle token structure - roles can be array of objects or array of strings
+      let roles: string[] = [];
+      if (decoded.roles) {
+        if (Array.isArray(decoded.roles)) {
+          if (decoded.roles.length > 0 && typeof decoded.roles[0] === 'object') {
+            // Parallel backend format: extract slugs
+            roles = decoded.roles.map((r: { slug?: string; role?: string }) => r.slug || r.role).filter(Boolean);
+          } else {
+            // Array of strings format (from admin login API)
+            roles = decoded.roles;
+          }
+        }
+      }
+      
+      user = {
+        userId: decoded.userId,
+        roles: roles,
+      };
+    } catch (error: any) {
+      console.error('Failed to verify token from Authorization header:', error);
+      throw new TRPCError({ 
+        code: 'UNAUTHORIZED',
+        message: `Invalid or expired token: ${error.message || 'Token verification failed'}`,
       });
     }
     
