@@ -91,7 +91,7 @@ export const dashboardRouter = router({
     // Get pending documents count for drivers and employers
     const pendingDriverDocuments = await prisma.multimedia.count({
       where: {
-        entityType: 'driver',
+        entityType: 'DRIVER',
         status: 'PENDING',
         deletedAt: null,
       },
@@ -99,7 +99,7 @@ export const dashboardRouter = router({
 
     const pendingEmployerDocuments = await prisma.multimedia.count({
       where: {
-        entityType: 'company',
+        entityType: 'COMPANY',
         status: 'PENDING',
         deletedAt: null,
       },
