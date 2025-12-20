@@ -3,6 +3,7 @@ import { router, protectedProcedureWithAuthHeader } from "../trpc";
 import prisma from "@/util/prismaClient";
 import { TRPCError } from "@trpc/server";
 import { ProfileStatus, DocumentStatus } from "@prisma/client";
+import { s3Client } from "@/util/s3Client";
 
 // Schema for document review
 const documentReviewSchema = z.object({
@@ -195,12 +196,28 @@ export const employerManagementRouter = router({
         ])
       );
 
-      // Enrich documents with company name and email
-      const enrichedDocuments = documents.map((doc) => ({
-        ...doc,
-        companyName: companyMap.get(doc.entityId)?.name || null,
-        companyEmail: companyMap.get(doc.entityId)?.email || null,
-      }));
+      // Enrich documents with company name, email, and document URL (matching backend serializeDocumentsResponseWithURL)
+      const enrichedDocuments = await Promise.all(
+        documents.map(async (doc) => {
+          const url = await s3Client.generatePresignedDownloadUrl(doc.filePath, true);
+          return {
+            multimediaId: doc.multimediaId,
+            entityId: doc.entityId,
+            entityType: doc.entityType,
+            entitySlug: doc.entitySlug,
+            mimeType: doc.mimeType,
+            filename: doc.filename,
+            filepath: doc.filePath,
+            side: doc.side,
+            status: doc.status,
+            createdAt: doc.createdAt,
+            updatedAt: doc.updatedAt,
+            companyName: companyMap.get(doc.entityId)?.name || null,
+            companyEmail: companyMap.get(doc.entityId)?.email || null,
+            url: url || null,
+          };
+        })
+      );
 
       return {
         documents: enrichedDocuments,

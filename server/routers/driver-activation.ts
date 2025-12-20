@@ -2,6 +2,7 @@ import { z } from "zod";
 import { router, protectedProcedureWithAuthHeader } from "../trpc";
 import prisma from "@/util/prismaClient";
 import { ProfileStatus, DocumentStatus } from "@prisma/client";
+import { s3Client } from "@/util/s3Client";
 
 export const driverActivationRouter = router({
   // Listing of driver profiles awaiting activation
@@ -277,12 +278,28 @@ export const driverActivationRouter = router({
         ])
       );
 
-      // Enrich documents with driver name and email
-      const enrichedDocuments = documents.map((doc) => ({
-        ...doc,
-        driverName: driverMap.get(doc.entityId)?.name || null,
-        driverEmail: driverMap.get(doc.entityId)?.email || null,
-      }));
+      // Enrich documents with driver name, email, and document URL (matching backend serializeDocumentsResponseWithURL)
+      const enrichedDocuments = await Promise.all(
+        documents.map(async (doc) => {
+          const url = await s3Client.generatePresignedDownloadUrl(doc.filePath, true);
+          return {
+            multimediaId: doc.multimediaId,
+            entityId: doc.entityId,
+            entityType: doc.entityType,
+            entitySlug: doc.entitySlug,
+            mimeType: doc.mimeType,
+            filename: doc.filename,
+            filepath: doc.filePath,
+            side: doc.side,
+            status: doc.status,
+            createdAt: doc.createdAt,
+            updatedAt: doc.updatedAt,
+            driverName: driverMap.get(doc.entityId)?.name || null,
+            driverEmail: driverMap.get(doc.entityId)?.email || null,
+            url: url || null,
+          };
+        })
+      );
 
       return {
         documents: enrichedDocuments,
