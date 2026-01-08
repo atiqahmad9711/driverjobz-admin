@@ -268,11 +268,12 @@ export const driverActivationRouter = router({
       z.object({
         page: z.number().min(1).default(1),
         pageSize: z.number().min(1).max(100).default(10),
-        driverName: z.string().optional(),
+        search: z.string().optional(),
       }).optional()
     )
-    .query(async ({ input }) => {
-      const { page = 1, pageSize = 10, driverName } = input || {};
+    .mutation(async ({ input }) => {
+      const { page = 1, pageSize = 10, search } = input || {};
+      const trimmedSearch = search?.trim() || undefined;
       const skip = (page - 1) * pageSize;
 
       // Build user where clause for driver name filter
@@ -282,15 +283,15 @@ export const driverActivationRouter = router({
       };
 
       // Filter by driver name (search in firstName, lastName, or name)
-      if (driverName) {
+      if (trimmedSearch) {
         userWhere.OR = [
-          { firstName: { contains: driverName, mode: 'insensitive' } },
-          { lastName: { contains: driverName, mode: 'insensitive' } },
-          { name: { contains: driverName, mode: 'insensitive' } },
+          { firstName: { contains: trimmedSearch, mode: 'insensitive' } },
+          { lastName: { contains: trimmedSearch, mode: 'insensitive' } },
+          { name: { contains: trimmedSearch, mode: 'insensitive' } },
         ];
       }
 
-      // Get all driver_ids from Driver table where user has isCompany = false
+      // Get all driver_ids from Driver table where user matches the search criteria
       const drivers = await prisma.driver.findMany({
         where: {
           user: userWhere,

@@ -10,10 +10,12 @@ export const jobReportsRouter = router({
         page: z.number().min(1).default(1),
         pageSize: z.number().min(1).max(100).default(10),
         status: z.enum(["PENDING", "ACCEPTED", "IGNORE"]).optional(),
+        search: z.string().optional(),
       }).optional()
     )
-    .query(async ({ input }) => {
-      const { page = 1, pageSize = 10, status } = input || {};
+    .mutation(async ({ input }) => {
+      const { page = 1, pageSize = 10, status, search } = input || {};
+      const trimmedSearch = search?.trim() || undefined;
       const skip = (page - 1) * pageSize;
 
       const where: any = {
@@ -22,6 +24,42 @@ export const jobReportsRouter = router({
 
       if (status) {
         where.status = status;
+      }
+
+      // Build search conditions for email, company name, and job title
+      if (trimmedSearch) {
+        // Build OR conditions for search
+        const orConditions: any[] = [];
+
+        // Search by company user email
+        orConditions.push({
+          jobPosting: {
+            company: {
+              user: {
+                email: { contains: trimmedSearch, mode: 'insensitive' },
+              },
+            },
+          },
+        });
+
+        // Search by company name
+        orConditions.push({
+          jobPosting: {
+            company: {
+              name: { contains: trimmedSearch, mode: 'insensitive' },
+            },
+          },
+        });
+
+        // Search by job title
+        orConditions.push({
+          jobPosting: {
+            jobTitle: { contains: trimmedSearch, mode: 'insensitive' },
+          },
+        });
+
+        // Add OR conditions to where clause
+        where.OR = orConditions;
       }
 
       const [reportedJobs, total] = await Promise.all([
@@ -50,6 +88,7 @@ export const jobReportsRouter = router({
                         userId: true,
                         firstName: true,
                         lastName: true,
+                        email: true,
                       },
                     },
                   },
