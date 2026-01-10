@@ -3,28 +3,118 @@ import { router, protectedProcedureWithAuthHeader } from "../trpc";
 import prisma from "@/util/prismaClient";
 import { ProfileStatus, DocumentStatus } from "@prisma/client";
 import { s3Client } from "@/util/s3Client";
+import { getLang } from "@/util/helper";
 
 export const driverActivationRouter = router({
   // Listing of driver profiles awaiting activation
   getProfilesAwaitingActivation: protectedProcedureWithAuthHeader
     .input(
       z.object({
-        page: z.number().min(1).default(1),
-        pageSize: z.number().min(1).max(100).default(10),
+        page: z.number().min(1).default(1).optional(),
+        pageSize: z.number().min(1).max(100).default(10).optional(),
+        search: z.string().optional(),
       }).optional()
     )
-    .query(async ({ input }) => {
-      const { page = 1, pageSize = 10 } = input || {};
+    .mutation(async ({ input, ctx }) => {
+      const { page = 1, pageSize = 10, search } = input || {};
+      const trimmedSearch = search?.trim() || undefined;
       const skip = (page - 1) * pageSize;
+      const locale = getLang(ctx.req);
 
-      // Query drivers with status PENDING (matching listing API structure)
-      const where = {
-        user: {
-          isCompany: false,
-          status: ProfileStatus.PENDING,
-          deletedAt: null,
-        },
+      const baseUserConditions = {
+        isCompany: false,
+        status: ProfileStatus.PENDING,
+        deletedAt: null,
       };
+
+      let where: any = {
+        user: baseUserConditions,
+      };
+
+      if (trimmedSearch) {
+        const categoryTranslationWhere: any = {
+          name: {
+            contains: trimmedSearch,
+            mode: 'insensitive',
+          },
+          locale: locale,
+        };
+        
+        let categoryTranslations = await prisma.transportationCategoryTranslation.findMany({
+          where: categoryTranslationWhere,
+          select: {
+            transportationCategoryId: true,
+          },
+        });
+
+        if (categoryTranslations.length === 0) {
+          categoryTranslations = await prisma.transportationCategoryTranslation.findMany({
+            where: {
+              name: {
+                contains: trimmedSearch,
+                mode: 'insensitive',
+              },
+              locale: {
+                in: ['en', 'es'],
+              },
+            },
+            select: {
+              transportationCategoryId: true,
+            },
+          });
+        }
+
+        const categoryIds = [...new Set(categoryTranslations.map((translation) => translation.transportationCategoryId))];
+
+        const nameMatchingUsers = await prisma.user.findMany({
+          where: {
+            ...baseUserConditions,
+            OR: [
+              { firstName: { contains: trimmedSearch, mode: 'insensitive' } },
+              { lastName: { contains: trimmedSearch, mode: 'insensitive' } },
+              { name: { contains: trimmedSearch, mode: 'insensitive' } },
+            ],
+          },
+          select: {
+            userId: true,
+          },
+        });
+
+        const nameMatchingUserIds = nameMatchingUsers.map(u => u.userId);
+        const orConditions: any[] = [];
+
+        if (categoryIds.length > 0) {
+          orConditions.push({
+            driverCategory: {
+              in: categoryIds,
+            },
+            user: baseUserConditions,
+          });
+        }
+
+        if (nameMatchingUserIds.length > 0) {
+          orConditions.push({
+            userId: {
+              in: nameMatchingUserIds,
+            },
+            user: baseUserConditions,
+          });
+        }
+
+        if (orConditions.length === 0) {
+          return {
+            drivers: [],
+            total: 0,
+            isLast: true,
+            page,
+            pageSize,
+          };
+        }
+
+        where = {
+          OR: orConditions,
+        };
+      }
 
       const [drivers, total] = await Promise.all([
         prisma.driver.findMany({
@@ -117,7 +207,6 @@ export const driverActivationRouter = router({
         prisma.driver.count({ where }),
       ]);
 
-      // Map drivers to match listing API response structure
       const mappedDrivers = drivers.map((driver) => {
         const fullName = driver.user.firstName && driver.user.lastName
           ? `${driver.user.firstName} ${driver.user.lastName}`
@@ -163,6 +252,7 @@ export const driverActivationRouter = router({
         };
       });
 
+
       return {
         drivers: mappedDrivers,
         total,
@@ -178,19 +268,33 @@ export const driverActivationRouter = router({
       z.object({
         page: z.number().min(1).default(1),
         pageSize: z.number().min(1).max(100).default(10),
+        search: z.string().optional(),
       }).optional()
     )
-    .query(async ({ input }) => {
-      const { page = 1, pageSize = 10 } = input || {};
+    .mutation(async ({ input }) => {
+      const { page = 1, pageSize = 10, search } = input || {};
+      const trimmedSearch = search?.trim() || undefined;
       const skip = (page - 1) * pageSize;
 
-      // Get all driver_ids from Driver table where user has isCompany = false
+      // Build user where clause for driver name filter
+      const userWhere: any = {
+        isCompany: false,
+        deletedAt: null,
+      };
+
+      // Filter by driver name (search in firstName, lastName, or name)
+      if (trimmedSearch) {
+        userWhere.OR = [
+          { firstName: { contains: trimmedSearch, mode: 'insensitive' } },
+          { lastName: { contains: trimmedSearch, mode: 'insensitive' } },
+          { name: { contains: trimmedSearch, mode: 'insensitive' } },
+        ];
+      }
+
+      // Get all driver_ids from Driver table where user matches the search criteria
       const drivers = await prisma.driver.findMany({
         where: {
-          user: {
-            isCompany: false,
-            deletedAt: null,
-          },
+          user: userWhere,
         },
         select: {
           driverId: true,

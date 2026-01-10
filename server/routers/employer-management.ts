@@ -29,10 +29,12 @@ export const employerManagementRouter = router({
       z.object({
         page: z.number().min(1).default(1),
         pageSize: z.number().min(1).max(100).default(10),
+        search: z.string().optional(),
       }).optional()
     )
-    .query(async ({ input }) => {
-      const { page = 1, pageSize = 10 } = input || {};
+    .mutation(async ({ input }) => {
+      const { page = 1, pageSize = 10, search } = input || {};
+      const trimmedSearch = search?.trim() || undefined;
       const skip = (page - 1) * pageSize;
 
       const where: {
@@ -40,6 +42,12 @@ export const employerManagementRouter = router({
         status: ProfileStatus;
         deletedAt: null;
         company: { some: {} };
+        OR?: Array<{
+          firstName?: { contains: string; mode: "insensitive" };
+          lastName?: { contains: string; mode: "insensitive" };
+          name?: { contains: string; mode: "insensitive" };
+          company?: { some: { name: { contains: string; mode: "insensitive" } } };
+        }>;
       } = {
         isCompany: true,
         status: ProfileStatus.PENDING,
@@ -48,6 +56,16 @@ export const employerManagementRouter = router({
           some: {},
         },
       };
+
+      // Filter by employer name (firstName, lastName, or name) and company name
+      if (trimmedSearch) {
+        where.OR = [
+          { firstName: { contains: trimmedSearch, mode: "insensitive" } },
+          { lastName: { contains: trimmedSearch, mode: "insensitive" } },
+          { name: { contains: trimmedSearch, mode: "insensitive" } },
+          { company: { some: { name: { contains: trimmedSearch, mode: "insensitive" } } } },
+        ];
+      }
 
       const [profiles, total] = await Promise.all([
         prisma.user.findMany({
@@ -104,21 +122,56 @@ export const employerManagementRouter = router({
       z.object({
         page: z.number().min(1).default(1),
         pageSize: z.number().min(1).max(100).default(10),
+        search: z.string().optional(),
       }).optional()
     )
-    .query(async ({ input }) => {
-      const { page = 1, pageSize = 10 } = input || {};
+    .mutation(async ({ input }) => {
+      const { page = 1, pageSize = 10, search } = input || {};
+      const trimmedSearch = search?.trim() || undefined;
       const skip = (page - 1) * pageSize;
 
-      // Get all company_ids from Company table where user has isCompany = true
-      const companies = await prisma.company.findMany({
-        where: {
-          user: {
-            isCompany: true,
-            deletedAt: null,
-          },
+      // Build where clause for company filter
+      const baseCompanyWhere = {
+        user: {
+          isCompany: true,
           deletedAt: null,
         },
+        deletedAt: null,
+      };
+
+      // Filter by employer name (firstName, lastName, or name) and company name
+      let companyWhere: any = baseCompanyWhere;
+      if (trimmedSearch) {
+        // Build user where clause for employer name filter
+        const userWhere: any = {
+          isCompany: true,
+          deletedAt: null,
+          OR: [
+            { firstName: { contains: trimmedSearch, mode: 'insensitive' } },
+            { lastName: { contains: trimmedSearch, mode: 'insensitive' } },
+            { name: { contains: trimmedSearch, mode: 'insensitive' } },
+          ],
+        };
+
+        companyWhere = {
+          ...baseCompanyWhere,
+          OR: [
+            { 
+              ...baseCompanyWhere,
+              name: { contains: trimmedSearch, mode: 'insensitive' },
+            },
+            {
+              ...baseCompanyWhere,
+              user: userWhere,
+            },
+          ],
+        };
+      }
+
+      // Get all company_ids from Company table where user has isCompany = true
+      // Filter by company name or user name
+      const companies = await prisma.company.findMany({
+        where: companyWhere,
         select: {
           companyId: true,
         },
@@ -240,8 +293,9 @@ export const employerManagementRouter = router({
         status: z.enum(["PENDING", "APPROVED", "REJECTED", "BLOCKED"]).optional(),
       }).optional()
     )
-    .query(async ({ input }) => {
+    .mutation(async ({ input }) => {
       const { page = 1, pageSize = 10, search, status } = input || {};
+      const trimmedSearch = search?.trim() || undefined;
       const skip = (page - 1) * pageSize;
 
       const where: {
@@ -252,6 +306,7 @@ export const employerManagementRouter = router({
         OR?: Array<{
           firstName?: { contains: string; mode: "insensitive" };
           lastName?: { contains: string; mode: "insensitive" };
+          name?: { contains: string; mode: "insensitive" };
           email?: { contains: string; mode: "insensitive" };
           company?: { some: { name: { contains: string; mode: "insensitive" } } };
         }>;
@@ -267,12 +322,14 @@ export const employerManagementRouter = router({
         where.status = status as ProfileStatus;
       }
 
-      if (search) {
+      // Filter by employer name (firstName, lastName, or name), email, and company name
+      if (trimmedSearch) {
         where.OR = [
-          { firstName: { contains: search, mode: "insensitive" } },
-          { lastName: { contains: search, mode: "insensitive" } },
-          { email: { contains: search, mode: "insensitive" } },
-          { company: { some: { name: { contains: search, mode: "insensitive" } } } },
+          { firstName: { contains: trimmedSearch, mode: "insensitive" } },
+          { lastName: { contains: trimmedSearch, mode: "insensitive" } },
+          { name: { contains: trimmedSearch, mode: "insensitive" } },
+          { email: { contains: trimmedSearch, mode: "insensitive" } },
+          { company: { some: { name: { contains: trimmedSearch, mode: "insensitive" } } } },
         ];
       }
 
