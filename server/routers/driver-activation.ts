@@ -17,7 +17,7 @@ export const driverActivationRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const { page = 1, pageSize = 10, search } = input || {};
-      const trimmedSearch = search?.trim() || undefined;
+      const trimmedSearch = (search && typeof search === 'string' && search.trim()) ? search.trim() : undefined;
       const skip = (page - 1) * pageSize;
       const locale = getLang(ctx.req);
 
@@ -119,7 +119,24 @@ export const driverActivationRouter = router({
       const [drivers, total] = await Promise.all([
         prisma.driver.findMany({
           where,
-          include: {
+          select: {
+            driverId: true,
+            updatedAt: true,
+            createdAt: true,
+            driverLicenseEndorsements: true,
+            driverLicenseClass: true,
+            totalExperienceYears: true,
+            totalVerifiableRelevantExperience: true,
+            totalVerifiableCdlExperience: true,
+            totalVerifiableBusDriverExperience: true,
+            vehiclePreference: true,
+            availability: true,
+            routeTypes: true,
+            preferredRouteType: true,
+            driverCategory: true,
+            employmentType: true,
+            emergencyVehicleTypes: true,
+            primaryVehicle: true,
             user: {
               select: {
                 userId: true,
@@ -182,7 +199,7 @@ export const driverActivationRouter = router({
               },
             },
             category: {
-              include: {
+              select: {
                 translations: true,
               },
             },
