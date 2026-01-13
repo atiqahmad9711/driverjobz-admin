@@ -360,6 +360,7 @@ export const driverActivationRouter = router({
           driverId: true,
           user: {
             select: {
+              userId: true,
               firstName: true,
               lastName: true,
               name: true,
@@ -370,7 +371,7 @@ export const driverActivationRouter = router({
       });
 
       // Create a map of driverId -> driver info
-      const driverMap = new Map<number, { name: string | null; email: string | null }>(
+      const driverMap = new Map<number, { name: string | null; email: string | null; userId: number | null }>(
         driversWithUsers.map((driver) => [
           driver.driverId,
           {
@@ -378,6 +379,7 @@ export const driverActivationRouter = router({
               ? `${driver.user.firstName} ${driver.user.lastName}`
               : driver.user.name || null,
             email: driver.user.email || null,
+            userId: driver.user.userId || null,
           },
         ])
       );
@@ -400,6 +402,7 @@ export const driverActivationRouter = router({
             updatedAt: doc.updatedAt,
             driverName: driverMap.get(doc.entityId)?.name || null,
             driverEmail: driverMap.get(doc.entityId)?.email || null,
+            userId: driverMap.get(doc.entityId)?.userId || null,
             url: url || null,
           };
         })

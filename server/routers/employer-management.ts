@@ -232,6 +232,7 @@ export const employerManagementRouter = router({
           name: true,
           user: {
             select: {
+              userId: true,
               email: true,
             },
           },
@@ -239,12 +240,13 @@ export const employerManagementRouter = router({
       });
 
       // Create a map of companyId -> company info
-      const companyMap = new Map<number, { name: string | null; email: string | null }>(
+      const companyMap = new Map<number, { name: string | null; email: string | null; userId: number | null }>(
         companiesWithUsers.map((company) => [
           company.companyId,
           {
             name: company.name || null,
             email: company.user.email || null,
+            userId: company.user.userId || null,
           },
         ])
       );
@@ -267,6 +269,7 @@ export const employerManagementRouter = router({
             updatedAt: doc.updatedAt,
             companyName: companyMap.get(doc.entityId)?.name || null,
             companyEmail: companyMap.get(doc.entityId)?.email || null,
+            userId: companyMap.get(doc.entityId)?.userId || null,
             url: url || null,
           };
         })
