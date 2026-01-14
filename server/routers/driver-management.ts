@@ -47,28 +47,46 @@ export const driverManagementRouter = router({
         });
       }
 
-      // Verify the user (entityId is the user_id)
-      const user = await prisma.user.findUnique({
-        where: { userId: documentExists.entityId },
-      });
+      // Check if document is for a driver
+      // Driver documents: entityType should be "driver" (or "DRIVER") AND entityId is a driver_id
+      const entityTypeUpper = documentExists.entityType.toUpperCase();
+      const isDriverEntityType = entityTypeUpper === "DRIVER";
 
-      if (!user) {
+      if (!isDriverEntityType) {
         throw new TRPCError({
-          code: "NOT_FOUND",
-          message: `User with ID ${documentExists.entityId} (entityId) does not exist`,
+          code: "BAD_REQUEST",
+          message: `Document with ID ${multimediaId} is not a driver document. Entity type: ${documentExists.entityType}`,
         });
       }
 
-      // Check if document is for a driver
-      // Driver documents: entityType should be "driver" (or "DRIVER") AND isCompany = false
-      const entityTypeUpper = documentExists.entityType.toUpperCase();
-      const isDriverEntityType = entityTypeUpper === "DRIVER";
-      const isDriverUser = user.isCompany === false;
+      // For driver documents, entityId is the driver_id, not user_id
+      // Verify the driver exists
+      const driver = await prisma.driver.findUnique({
+        where: { driverId: documentExists.entityId },
+        select: {
+          driverId: true,
+          userId: true,
+          user: {
+            select: {
+              userId: true,
+              isCompany: true,
+            },
+          },
+        },
+      });
 
-      if (!isDriverEntityType || !isDriverUser) {
+      if (!driver) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: `Driver with ID ${documentExists.entityId} (entityId) does not exist`,
+        });
+      }
+
+      // Verify the driver's user is not a company
+      if (driver.user.isCompany === true) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: `Document with ID ${multimediaId} is not a driver document. Entity type: ${documentExists.entityType}, User isCompany: ${user.isCompany}`,
+          message: `Document with ID ${multimediaId} is not a driver document. Driver's user isCompany: ${driver.user.isCompany}`,
         });
       }
 
