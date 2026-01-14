@@ -126,6 +126,7 @@ export const driverReportsRouter = router({
                     firstName: true,
                     lastName: true,
                     email: true,
+                    status: true,
                   },
                 },
                 category: {
@@ -142,6 +143,7 @@ export const driverReportsRouter = router({
                 firstName: true,
                 lastName: true,
                 email: true,
+                status: true,
               },
             },
           },
