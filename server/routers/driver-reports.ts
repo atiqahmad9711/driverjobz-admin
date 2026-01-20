@@ -2,6 +2,7 @@ import { z } from "zod";
 import { router, protectedProcedureWithAuthHeader } from "../trpc";
 import prisma from "@/util/prismaClient";
 import { getLang } from "@/util/helper";
+import { ProfileStatus } from "@prisma/client";
 
 export const driverReportsRouter = router({
   // Get reported/flagged drivers
@@ -10,7 +11,7 @@ export const driverReportsRouter = router({
       z.object({
         page: z.number().min(1).default(1),
         pageSize: z.number().min(1).max(100).default(10),
-        status: z.enum(["PENDING", "ACCEPTED", "IGNORE"]).optional(),
+        status: z.enum(["PENDING", "APPROVED", "REJECTED", "BLOCKED"]).optional(),
         search: z.string().optional(),
       }).optional()
     )
@@ -23,10 +24,6 @@ export const driverReportsRouter = router({
       const where: any = {
         deletedAt: null,
       };
-
-      if (status) {
-        where.status = status;
-      }
 
       // Build search conditions for email, name, and category
       if (trimmedSearch) {
@@ -103,6 +100,30 @@ export const driverReportsRouter = router({
 
         // Add OR conditions to where clause
         where.OR = orConditions;
+      }
+
+      // Filter by driver's user status
+      if (status) {
+        if (where.OR) {
+          // Combine search OR conditions with status filter using AND
+          where.AND = [
+            { OR: where.OR },
+            {
+              driver: {
+                user: {
+                  status: status as ProfileStatus,
+                },
+              },
+            },
+          ];
+          delete where.OR;
+        } else {
+          where.driver = {
+            user: {
+              status: status as ProfileStatus,
+            },
+          };
+        }
       }
 
       const [reportedDrivers, total] = await Promise.all([
