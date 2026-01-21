@@ -9,7 +9,7 @@ export const jobReportsRouter = router({
       z.object({
         page: z.number().min(1).default(1),
         pageSize: z.number().min(1).max(100).default(10),
-        status: z.enum(["PENDING", "ACCEPTED", "IGNORE"]).optional(),
+        status: z.enum(["DRAFT", "PENDING", "PUBLISHED", "INACTIVE", "EXPIRED", "REJECTED", "BLOCKED"]).optional(),
         search: z.string().optional(),
       }).optional()
     )
@@ -22,44 +22,50 @@ export const jobReportsRouter = router({
         deletedAt: null,
       };
 
-      if (status) {
-        where.status = status;
-      }
+      // Map BLOCKED to INACTIVE (as per job-management.ts logic)
+      const jobStatus = status === "BLOCKED" ? "INACTIVE" : status;
 
       // Build search conditions for email, company name, and job title
       if (trimmedSearch) {
-        // Build OR conditions for search
-        const orConditions: any[] = [];
-
-        // Search by company user email
-        orConditions.push({
-          jobPosting: {
-            company: {
-              user: {
-                email: { contains: trimmedSearch, mode: 'insensitive' },
+        const orConditions: any[] = [
+          {
+            jobPosting: {
+              company: {
+                user: {
+                  email: { contains: trimmedSearch, mode: 'insensitive' },
+                },
               },
             },
           },
-        });
-
-        // Search by company name
-        orConditions.push({
-          jobPosting: {
-            company: {
-              name: { contains: trimmedSearch, mode: 'insensitive' },
+          {
+            jobPosting: {
+              company: {
+                name: { contains: trimmedSearch, mode: 'insensitive' },
+              },
             },
           },
-        });
-
-        // Search by job title
-        orConditions.push({
-          jobPosting: {
-            jobTitle: { contains: trimmedSearch, mode: 'insensitive' },
+          {
+            jobPosting: {
+              jobTitle: { contains: trimmedSearch, mode: 'insensitive' },
+            },
           },
-        });
+        ];
 
-        // Add OR conditions to where clause
         where.OR = orConditions;
+      }
+
+      // Filter by jobPosting status
+      if (status) {
+        if (where.OR) {
+          // Combine search OR conditions with status filter using AND
+          where.AND = [
+            { OR: where.OR },
+            { jobPosting: { status: jobStatus } },
+          ];
+          delete where.OR;
+        } else {
+          where.jobPosting = { status: jobStatus };
+        }
       }
 
       const [reportedJobs, total] = await Promise.all([
