@@ -156,7 +156,7 @@ export const employerManagementRouter = router({
         companyWhere = {
           ...baseCompanyWhere,
           OR: [
-            { 
+            {
               ...baseCompanyWhere,
               name: { contains: trimmedSearch, mode: 'insensitive' },
             },
@@ -577,9 +577,71 @@ export const employerManagementRouter = router({
         data: { status: "APPROVED" },
       });
 
+      // Send account activated email notification
+      let emailSent = false;
+      let emailError: string | null = null;
+
+      try {
+        const backendApiUrl = process.env.BACKEND_API_URL;
+        const emailEndpoint = `${backendApiUrl}/api/v1/auth/send-account-activated-email`;
+        const requestBody = { userId: Number(userId) };
+
+        console.log('[DEBUG] Sending activation email:', {
+          endpoint: emailEndpoint,
+          userId: Number(userId),
+          backendApiUrl,
+        });
+
+        if (backendApiUrl) {
+          const emailResponse = await fetch(emailEndpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody),
+          });
+
+          const responseText = await emailResponse.text();
+          let responseData;
+          try {
+            responseData = JSON.parse(responseText);
+          } catch {
+            responseData = responseText;
+          }
+
+
+          if (emailResponse.ok) {
+            emailSent = true;
+            console.log(`[SUCCESS] Activation email sent successfully for user ${userId}`);
+          } else {
+            emailError = `Failed to send activation email: ${emailResponse.status} ${emailResponse.statusText}`;
+            console.error(`[ERROR] Failed to send activation email for user ${userId}:`, {
+              status: emailResponse.status,
+              statusText: emailResponse.statusText,
+              response: responseData,
+            });
+            // Don't throw error - activation was successful, email is just a notification
+          }
+        } else {
+          emailError = 'BACKEND_API_URL or API_URL not configured';
+          console.warn('[WARN] BACKEND_API_URL or API_URL not configured. Skipping activation email.');
+        }
+      } catch (err: any) {
+        // Log the error but don't fail the activation
+        emailError = `Error sending activation email: ${err.message}`;
+        console.error(`[ERROR] Exception sending activation email for user ${userId}:`, {
+          message: err.message,
+          stack: err.stack,
+          name: err.name,
+          cause: err.cause,
+        });
+      }
+
       return {
         success: true,
         user: updated,
+        emailSent,
+        emailError: emailError || undefined,
       };
     }),
 });
