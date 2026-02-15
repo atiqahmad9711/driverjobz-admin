@@ -101,3 +101,164 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
+
+// --- Profile blocked (driver / employer) ---
+
+const PROFILE_BLOCKED_SUBJECT = "Your DriverJobz Profile Has Been Blocked";
+
+export function getProfileBlockedEmailSubject(): string {
+  return PROFILE_BLOCKED_SUBJECT;
+}
+
+export interface ProfileBlockedEmailParams {
+  firstName?: string;
+  blockReason?: string;
+}
+
+export function getProfileBlockedEmailHtml(params: ProfileBlockedEmailParams): string {
+  const { firstName = "there", blockReason } = params;
+  const reasonBlock = blockReason
+    ? `
+    <p style="margin: 0 0 20px 0;">
+      <strong style="color: #000000;">Reason:</strong><br />
+      <span style="color: #555555;">${escapeHtml(blockReason)}</span>
+    </p>
+    `
+    : "";
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile Blocked</title>
+</head>
+<body style="margin: 0;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; margin: 0 auto; padding: 20px; font-family: 'Inter', Arial, sans-serif; max-width: 600px; font-size: 14px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f2c500; height: 8px;">
+          <tr><td height="8" style="font-size: 1px; line-height: 1px;">&nbsp;</td></tr>
+        </table>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td align="center">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">
+                <tr>
+                  <td align="center" style="padding: 30px 20px 20px 20px;">
+                    <span style="font-size: 24px; font-weight: bold; color: #000000;">driver &gt;&gt;</span>
+                    <span style="font-size: 24px; font-weight: bold; color: #000000;"> &lt;&lt; jobz</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 24px 0 40px 0; font-size: 14px; line-height: 24px; color: #555555; border-top: 1px solid #e5e5e5; border-bottom: 1px solid #e5e5e5;">
+                    <p style="margin: 0 0 20px 0;">Hello ${escapeHtml(firstName)},</p>
+                    <p style="margin: 0 0 20px 0;">
+                      <strong style="color: #000000;">Your profile has been blocked.</strong>
+                    </p>
+                    <p style="margin: 0 0 20px 0;">
+                      You will not be able to use certain features until this is resolved. If you believe this is an error or would like to appeal, please contact our support team.
+                    </p>
+                    ${reasonBlock}
+                    <p style="margin: 0 0 30px 0;">Thanks &amp; Regards</p>
+                    <p style="margin: 0; color: #000000;"><strong>driverjobz</strong></p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f2c500; height: 8px;">
+          <tr><td height="8" style="font-size: 1px; line-height: 1px;">&nbsp;</td></tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+
+// --- Job blocked ---
+
+const JOB_BLOCKED_SUBJECT = "Your Job Posting Has Been Blocked";
+
+export function getJobBlockedEmailSubject(): string {
+  return JOB_BLOCKED_SUBJECT;
+}
+
+export interface JobBlockedEmailParams {
+  firstName?: string;
+  jobTitle?: string;
+  blockReason?: string;
+}
+
+export function getJobBlockedEmailHtml(params: JobBlockedEmailParams): string {
+  const { firstName = "there", jobTitle, blockReason } = params;
+  const jobLine = jobTitle
+    ? `<p style="margin: 0 0 20px 0;">Job: <strong style="color: #000000;">${escapeHtml(jobTitle)}</strong></p>`
+    : "";
+  const reasonBlock = blockReason
+    ? `
+    <p style="margin: 0 0 20px 0;">
+      <strong style="color: #000000;">Reason:</strong><br />
+      <span style="color: #555555;">${escapeHtml(blockReason)}</span>
+    </p>
+    `
+    : "";
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Job Blocked</title>
+</head>
+<body style="margin: 0;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; margin: 0 auto; padding: 20px; font-family: 'Inter', Arial, sans-serif; max-width: 600px; font-size: 14px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f2c500; height: 8px;">
+          <tr><td height="8" style="font-size: 1px; line-height: 1px;">&nbsp;</td></tr>
+        </table>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td align="center">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">
+                <tr>
+                  <td align="center" style="padding: 30px 20px 20px 20px;">
+                    <span style="font-size: 24px; font-weight: bold; color: #000000;">driver &gt;&gt;</span>
+                    <span style="font-size: 24px; font-weight: bold; color: #000000;"> &lt;&lt; jobz</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 24px 0 40px 0; font-size: 14px; line-height: 24px; color: #555555; border-top: 1px solid #e5e5e5; border-bottom: 1px solid #e5e5e5;">
+                    <p style="margin: 0 0 20px 0;">Hello ${escapeHtml(firstName)},</p>
+                    <p style="margin: 0 0 20px 0;">
+                      <strong style="color: #000000;">Your job has been blocked.</strong>
+                    </p>
+                    ${jobLine}
+                    <p style="margin: 0 0 20px 0;">
+                      The job posting is no longer visible to drivers. If you believe this is an error or would like to appeal, please contact our support team.
+                    </p>
+                    ${reasonBlock}
+                    <p style="margin: 0 0 30px 0;">Thanks &amp; Regards</p>
+                    <p style="margin: 0; color: #000000;"><strong>driverjobz</strong></p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f2c500; height: 8px;">
+          <tr><td height="8" style="font-size: 1px; line-height: 1px;">&nbsp;</td></tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}

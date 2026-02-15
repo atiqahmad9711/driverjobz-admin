@@ -8,6 +8,8 @@ import { sendEmail } from "@/util/send-email";
 import {
   getProfileRejectedEmailHtml,
   getProfileRejectedEmailSubject,
+  getProfileBlockedEmailHtml,
+  getProfileBlockedEmailSubject,
 } from "@/util/email-templates";
 
 // Schema for document review
@@ -16,10 +18,11 @@ const documentReviewSchema = z.object({
   status: z.enum(["APPROVED", "REJECTED"]),
 });
 
-// Schema for employer status update
+// Schema for employer status update (block_reason used when action is BLOCK; email sent only if current status is APPROVED)
 const employerStatusUpdateSchema = z.object({
   userId: z.number(),
   action: z.enum(["BLOCK", "UNBLOCK", "DELETE"]),
+  block_reason: z.string().optional(),
 });
 
 // Schema for employer activation
@@ -478,20 +481,25 @@ export const employerManagementRouter = router({
       };
     }),
 
-  // API7: Update employer status (block/unblock/delete)
+  // API7: Update employer status (block/unblock/delete). When BLOCK and status was APPROVED, send block email with reason.
   updateEmployerStatus: protectedProcedureWithAuthHeader
     .input(employerStatusUpdateSchema)
     .mutation(async ({ input }) => {
-      const { userId, action } = input;
+      const { userId, action, block_reason } = input;
 
-      // Verify user is an employer
+      // Verify user is an employer and get status, email for block notification
       const user = await prisma.user.findFirst({
         where: {
           userId,
           isCompany: true,
-          company: {
-            some: {},
-          },
+          company: { some: {} },
+        },
+        select: {
+          userId: true,
+          status: true,
+          email: true,
+          firstName: true,
+          lastName: true,
         },
       });
 
@@ -502,12 +510,32 @@ export const employerManagementRouter = router({
         });
       }
 
+      const wasApproved = user.status === "APPROVED";
+
       let updated;
       if (action === "BLOCK") {
         updated = await prisma.user.update({
           where: { userId },
           data: { status: "BLOCKED" },
         });
+        // Send block email only when blocking an APPROVED profile
+        if (wasApproved && user.email) {
+          try {
+            const firstName = user.firstName || user.lastName || "there";
+            const html = getProfileBlockedEmailHtml({
+              firstName,
+              blockReason: block_reason,
+            });
+            await sendEmail(
+              [user.email],
+              getProfileBlockedEmailSubject(),
+              undefined,
+              html
+            );
+          } catch (err) {
+            console.error("[ERROR] Block email for employer:", userId, err);
+          }
+        }
       } else if (action === "UNBLOCK") {
         updated = await prisma.user.update({
           where: { userId },
@@ -705,10 +733,6 @@ export const employerManagementRouter = router({
         }),
       ]);
 
-      const updated = await prisma.user.findUnique({
-        where: { userId },
-      });
-
       let emailSent = false;
       let emailError: string | null = null;
 
@@ -738,7 +762,7 @@ export const employerManagementRouter = router({
 
       return {
         success: true,
-        user: updated,
+        user: { userId, status: "REJECTED" as const },
         emailSent,
         emailError: emailError ?? undefined,
       };
