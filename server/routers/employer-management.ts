@@ -4,6 +4,11 @@ import prisma from "@/util/prismaClient";
 import { TRPCError } from "@trpc/server";
 import { ProfileStatus, DocumentStatus } from "@prisma/client";
 import { s3Client } from "@/util/s3Client";
+import { sendEmail } from "@/util/send-email";
+import {
+  getProfileRejectedEmailHtml,
+  getProfileRejectedEmailSubject,
+} from "@/util/email-templates";
 
 // Schema for document review
 const documentReviewSchema = z.object({
@@ -20,6 +25,12 @@ const employerStatusUpdateSchema = z.object({
 // Schema for employer activation
 const employerActivationSchema = z.object({
   userId: z.number(),
+});
+
+// Schema for employer rejection (with reason; supports multiple rejections via log)
+const rejectEmployerSchema = z.object({
+  userId: z.number(),
+  rejection_message: z.string(),
 });
 
 export const employerManagementRouter = router({
@@ -642,6 +653,94 @@ export const employerManagementRouter = router({
         user: updated,
         emailSent,
         emailError: emailError || undefined,
+      };
+    }),
+
+  // Reject employer profile: set status REJECTED, log reason, send email (same mail provision as driverjobs-be)
+  rejectEmployer: protectedProcedureWithAuthHeader
+    .input(rejectEmployerSchema)
+    .mutation(async ({ input }) => {
+      const { userId, rejection_message } = input;
+
+      const user = await prisma.user.findFirst({
+        where: {
+          userId,
+          isCompany: true,
+          company: { some: {} },
+        },
+        select: {
+          userId: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          deletedAt: true,
+        },
+      });
+
+      if (!user) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Employer not found",
+        });
+      }
+
+      if (user.deletedAt) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Employer has been deleted",
+        });
+      }
+
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { userId },
+          data: { status: "REJECTED" },
+        }),
+        prisma.profileRejectionLog.create({
+          data: {
+            profileId: userId,
+            type: "EMPLOYER",
+            rejectionMessage: rejection_message || null,
+          },
+        }),
+      ]);
+
+      const updated = await prisma.user.findUnique({
+        where: { userId },
+      });
+
+      let emailSent = false;
+      let emailError: string | null = null;
+
+      if (user.email) {
+        try {
+          const firstName = user.firstName || user.lastName || "there";
+          const html = getProfileRejectedEmailHtml({
+            firstName,
+            rejectionMessage: rejection_message || undefined,
+            profileType: "EMPLOYER",
+          });
+          await sendEmail(
+            [user.email],
+            getProfileRejectedEmailSubject(),
+            undefined,
+            html
+          );
+          emailSent = true;
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          emailError = `Error sending rejection email: ${message}`;
+          console.error("[ERROR] Rejection email for employer:", userId, err);
+        }
+      } else {
+        emailError = "Employer has no email address";
+      }
+
+      return {
+        success: true,
+        user: updated,
+        emailSent,
+        emailError: emailError ?? undefined,
       };
     }),
 });

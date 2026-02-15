@@ -2,6 +2,11 @@ import { z } from "zod";
 import { router, protectedProcedureWithAuthHeader } from "../trpc";
 import prisma from "@/util/prismaClient";
 import { TRPCError } from "@trpc/server";
+import { sendEmail } from "@/util/send-email";
+import {
+  getProfileRejectedEmailHtml,
+  getProfileRejectedEmailSubject,
+} from "@/util/email-templates";
 
 // Schema for document review
 const documentReviewSchema = z.object({
@@ -18,6 +23,12 @@ const driverStatusUpdateSchema = z.object({
 // Schema for driver activation
 const driverActivationSchema = z.object({
   userId: z.number(),
+});
+
+// Schema for driver rejection (with reason; supports multiple rejections via log)
+const rejectDriverSchema = z.object({
+  userId: z.number(),
+  rejection_message: z.string(),
 });
 
 export const driverManagementRouter = router({
@@ -327,6 +338,94 @@ export const driverManagementRouter = router({
           message: `Failed to activate driver: ${error.message || "Unknown error"}`,
         });
       }
+    }),
+
+  // Reject driver profile: set status REJECTED, log reason, send email (same mail provision as driverjobs-be)
+  rejectDriver: protectedProcedureWithAuthHeader
+    .input(rejectDriverSchema)
+    .mutation(async ({ input }) => {
+      const { userId, rejection_message } = input;
+
+      const user = await prisma.user.findFirst({
+        where: {
+          userId,
+          isCompany: false,
+          driver: { isNot: null },
+        },
+        select: {
+          userId: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          deletedAt: true,
+        },
+      });
+
+      if (!user) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Driver not found",
+        });
+      }
+
+      if (user.deletedAt) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Driver has been deleted",
+        });
+      }
+
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { userId },
+          data: { status: "REJECTED" },
+        }),
+        prisma.profileRejectionLog.create({
+          data: {
+            profileId: userId,
+            type: "DRIVER",
+            rejectionMessage: rejection_message || null,
+          },
+        }),
+      ]);
+
+      const updated = await prisma.user.findUnique({
+        where: { userId },
+      });
+
+      let emailSent = false;
+      let emailError: string | null = null;
+
+      if (user.email) {
+        try {
+          const firstName = user.firstName || user.lastName || "there";
+          const html = getProfileRejectedEmailHtml({
+            firstName,
+            rejectionMessage: rejection_message || undefined,
+            profileType: "DRIVER",
+          });
+          await sendEmail(
+            [user.email],
+            getProfileRejectedEmailSubject(),
+            undefined,
+            html
+          );
+          emailSent = true;
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          emailError = `Error sending rejection email: ${message}`;
+          console.error("[ERROR] Rejection email for driver:", userId, err);
+        }
+      } else {
+        emailError = "Driver has no email address";
+      }
+
+      return {
+        success: true,
+        user: updated,
+        emailSent,
+        emailError: emailError ?? undefined,
+      };
     }),
 });
 
