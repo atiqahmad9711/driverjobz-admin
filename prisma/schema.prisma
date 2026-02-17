@@ -1322,6 +1322,17 @@ enum ProfileStatus {
   BLOCKED
 }
 
+model ProfileRejectionLog {
+  profileRejectionLogId Int      @id @default(autoincrement()) @map("profile_rejection_log_id")
+  profileId             Int      @map("profile_id") // references user_id; no Prisma relation to User
+  type                  String   @db.VarChar(10) @map("type") // DRIVER | EMPLOYER
+  rejectionMessage      String?  @map("rejection_message")
+  createdAt             DateTime @default(now()) @map("created_at")
+  deletedAt             DateTime? @map("deleted_at")
+
+  @@map("profile_rejection_log")
+}
+
 enum DocumentStatus {
   PENDING
   APPROVED

@@ -4,6 +4,13 @@ import prisma from "@/util/prismaClient";
 import { TRPCError } from "@trpc/server";
 import { ProfileStatus, DocumentStatus } from "@prisma/client";
 import { s3Client } from "@/util/s3Client";
+import { sendEmail } from "@/util/send-email";
+import {
+  getProfileRejectedEmailHtml,
+  getProfileRejectedEmailSubject,
+  getProfileBlockedEmailHtml,
+  getProfileBlockedEmailSubject,
+} from "@/util/email-templates";
 
 // Schema for document review
 const documentReviewSchema = z.object({
@@ -11,15 +18,22 @@ const documentReviewSchema = z.object({
   status: z.enum(["APPROVED", "REJECTED"]),
 });
 
-// Schema for employer status update
+// Schema for employer status update (block_reason used when action is BLOCK; email sent only if current status is APPROVED)
 const employerStatusUpdateSchema = z.object({
   userId: z.number(),
   action: z.enum(["BLOCK", "UNBLOCK", "DELETE"]),
+  block_reason: z.string().optional(),
 });
 
 // Schema for employer activation
 const employerActivationSchema = z.object({
   userId: z.number(),
+});
+
+// Schema for employer rejection (with reason; supports multiple rejections via log)
+const rejectEmployerSchema = z.object({
+  userId: z.number(),
+  rejection_message: z.string(),
 });
 
 export const employerManagementRouter = router({
@@ -467,20 +481,25 @@ export const employerManagementRouter = router({
       };
     }),
 
-  // API7: Update employer status (block/unblock/delete)
+  // API7: Update employer status (block/unblock/delete). When BLOCK and status was APPROVED, send block email with reason.
   updateEmployerStatus: protectedProcedureWithAuthHeader
     .input(employerStatusUpdateSchema)
     .mutation(async ({ input }) => {
-      const { userId, action } = input;
+      const { userId, action, block_reason } = input;
 
-      // Verify user is an employer
+      // Verify user is an employer and get status, email for block notification
       const user = await prisma.user.findFirst({
         where: {
           userId,
           isCompany: true,
-          company: {
-            some: {},
-          },
+          company: { some: {} },
+        },
+        select: {
+          userId: true,
+          status: true,
+          email: true,
+          firstName: true,
+          lastName: true,
         },
       });
 
@@ -491,12 +510,32 @@ export const employerManagementRouter = router({
         });
       }
 
+      const wasApproved = user.status === "APPROVED";
+
       let updated;
       if (action === "BLOCK") {
         updated = await prisma.user.update({
           where: { userId },
           data: { status: "BLOCKED" },
         });
+        // Send block email only when blocking an APPROVED profile
+        if (wasApproved && user.email) {
+          try {
+            const firstName = user.firstName || user.lastName || "there";
+            const html = getProfileBlockedEmailHtml({
+              firstName,
+              blockReason: block_reason,
+            });
+            await sendEmail(
+              [user.email],
+              getProfileBlockedEmailSubject(),
+              undefined,
+              html
+            );
+          } catch (err) {
+            console.error("[ERROR] Block email for employer:", userId, err);
+          }
+        }
       } else if (action === "UNBLOCK") {
         updated = await prisma.user.update({
           where: { userId },
@@ -642,6 +681,90 @@ export const employerManagementRouter = router({
         user: updated,
         emailSent,
         emailError: emailError || undefined,
+      };
+    }),
+
+  // Reject employer profile: set status REJECTED, log reason, send email (same mail provision as driverjobs-be)
+  rejectEmployer: protectedProcedureWithAuthHeader
+    .input(rejectEmployerSchema)
+    .mutation(async ({ input }) => {
+      const { userId, rejection_message } = input;
+
+      const user = await prisma.user.findFirst({
+        where: {
+          userId,
+          isCompany: true,
+          company: { some: {} },
+        },
+        select: {
+          userId: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          deletedAt: true,
+        },
+      });
+
+      if (!user) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Employer not found",
+        });
+      }
+
+      if (user.deletedAt) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Employer has been deleted",
+        });
+      }
+
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { userId },
+          data: { status: "REJECTED" },
+        }),
+        prisma.profileRejectionLog.create({
+          data: {
+            profileId: userId,
+            type: "EMPLOYER",
+            rejectionMessage: rejection_message || null,
+          },
+        }),
+      ]);
+
+      let emailSent = false;
+      let emailError: string | null = null;
+
+      if (user.email) {
+        try {
+          const firstName = user.firstName || user.lastName || "there";
+          const html = getProfileRejectedEmailHtml({
+            firstName,
+            rejectionMessage: rejection_message || undefined,
+            profileType: "EMPLOYER",
+          });
+          await sendEmail(
+            [user.email],
+            getProfileRejectedEmailSubject(),
+            undefined,
+            html
+          );
+          emailSent = true;
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          emailError = `Error sending rejection email: ${message}`;
+          console.error("[ERROR] Rejection email for employer:", userId, err);
+        }
+      } else {
+        emailError = "Employer has no email address";
+      }
+
+      return {
+        success: true,
+        user: { userId, status: "REJECTED" as const },
+        emailSent,
+        emailError: emailError ?? undefined,
       };
     }),
 });
